@@ -1,0 +1,20 @@
+{
+  "name": "tharu-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kapruka Agent Challenge — Tharu AI shopping agent monorepo",
+  "workspaces": [
+    "frontend",
+    "backend-express"
+  ],
+  "scripts": {
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:express": "npm run dev --workspace=backend-express",
+    "build:frontend": "npm run build --workspace=frontend",
+    "build:express": "npm run build --workspace=backend-express",
+    "install:all": "npm install && npm install --workspace=frontend && npm install --workspace=backend-express"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
