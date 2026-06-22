@@ -1,12 +1,16 @@
 # Tharu AI
 
-AI shopping agent for the [Kapruka Agent Challenge](https://mcp.kapruka.com). A conversational chat UI that helps customers discover products, get delivery quotes, and checkout via the Kapruka MCP.
+AI shopping agent for the [Kapruka Agent Challenge](https://mcp.kapruka.com). A full-screen conversational gift concierge — discover products, get curated bundles, and checkout via the live Kapruka MCP.
 
-Monorepo with three services:
+## Architecture
 
-- `frontend` — React + Vite
-- `backend-express` — Express.js API
-- `backend-python` — FastAPI API
+| Service | Role |
+|---------|------|
+| `frontend` | React + Vite chat UI with product cards & gift bundles |
+| `backend-express` | Orchestration — sessions, cart, Kapruka MCP, Python bridge |
+| `backend-python` | AI agents — intent, gift design, product strategy, conversation |
+
+**Flow:** User message → Express → Python agents (structured JSON) → Kapruka MCP product search → rich response to frontend.
 
 ## Requirements
 
@@ -16,21 +20,19 @@ Monorepo with three services:
 ## Setup
 
 ```bash
-# Install JS dependencies (root + workspaces)
 npm install
 
-# Python backend
 cd backend-python
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 ```
 
-Copy `.env.example` to `.env` in each backend folder when you add config.
+Copy `.env.example` to `.env` in `backend-express` and `frontend` if needed.
 
 ## Run
 
-Open three terminals:
+Three terminals:
 
 ```bash
 # Frontend — http://localhost:5173
@@ -39,8 +41,10 @@ npm run dev:frontend
 # Express — http://localhost:3001
 npm run dev:express
 
-# FastAPI — http://localhost:8000
+# Python agents — http://localhost:8000
 cd backend-python && ./scripts/dev.sh
 ```
 
-Health checks: `GET /health` on both backends.
+Try: *"Birthday gift for mom under 5000"* or *"Anniversary roses and chocolates"*
+
+Health: `GET /health` on both backends.

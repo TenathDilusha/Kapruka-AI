@@ -8,5 +8,5 @@ if [[ ! -d .venv ]]; then
 fi
 
 source .venv/bin/activate
-pip install -q -r requirements.txt
+python3 -m pip install -q -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port "${PORT:-8000}"
