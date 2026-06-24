@@ -1,5 +1,3 @@
-import { Bot, User } from "lucide-react";
-
 import { BundleCard } from "@/components/products/BundleCard";
 import { ProductCarousel } from "@/components/products/ProductCard";
 import { cn } from "@/lib/utils";
@@ -14,22 +12,14 @@ export function ChatBubble({ message, onAddProduct }: ChatBubbleProps) {
   const isUser = message.role === "user";
 
   return (
-    <div className={cn("flex gap-3", isUser ? "flex-row-reverse" : "flex-row")}>
-      <div
-        className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-          isUser ? "bg-amber-500 text-stone-950" : "bg-stone-800 text-amber-400",
-        )}
-      >
-        {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-      </div>
+    <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
       <div className={cn("max-w-[85%] space-y-3", isUser ? "items-end" : "items-start")}>
         <div
           className={cn(
-            "rounded-2xl px-4 py-3 text-sm leading-relaxed",
+            "rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm",
             isUser
-              ? "bg-amber-500 text-stone-950 rounded-tr-md"
-              : "bg-stone-800/90 text-stone-100 rounded-tl-md border border-stone-700/50",
+              ? "rounded-tr-md bg-gradient-to-br from-brand-gold to-brand-gold-dark text-text-primary"
+              : "rounded-tl-md border border-brand-purple/10 bg-white text-text-primary",
           )}
         >
           <p className="whitespace-pre-wrap">{message.content}</p>
@@ -38,7 +28,7 @@ export function ChatBubble({ message, onAddProduct }: ChatBubbleProps) {
               href={message.checkoutUrl}
               target="_blank"
               rel="noreferrer"
-              className="mt-3 inline-flex rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-400"
+              className="mt-3 inline-flex rounded-xl bg-brand-purple px-4 py-2 text-sm font-semibold text-white hover:bg-[#520dc2]"
             >
               Pay on Kapruka →
             </a>
@@ -63,18 +53,15 @@ export function ChatBubble({ message, onAddProduct }: ChatBubbleProps) {
 
 export function TypingIndicator({ status }: { status?: string }) {
   return (
-    <div className="flex gap-3">
-      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-800 text-amber-400">
-        <Bot className="h-4 w-4" />
-      </div>
-      <div className="rounded-2xl rounded-tl-md border border-stone-700/50 bg-stone-800/90 px-4 py-3">
+    <div className="flex justify-start">
+      <div className="rounded-2xl rounded-tl-md border border-brand-purple/10 bg-white px-4 py-3 shadow-sm">
         <div className="flex items-center gap-2">
           <span className="flex gap-1">
-            <span className="h-2 w-2 animate-bounce rounded-full bg-amber-400 [animation-delay:-0.3s]" />
-            <span className="h-2 w-2 animate-bounce rounded-full bg-amber-400 [animation-delay:-0.15s]" />
-            <span className="h-2 w-2 animate-bounce rounded-full bg-amber-400" />
+            <span className="h-2 w-2 animate-bounce rounded-full bg-brand-purple [animation-delay:-0.3s]" />
+            <span className="h-2 w-2 animate-bounce rounded-full bg-brand-purple [animation-delay:-0.15s]" />
+            <span className="h-2 w-2 animate-bounce rounded-full bg-brand-purple" />
           </span>
-          {status && <span className="text-xs text-stone-400">{status}</span>}
+          {status && <span className="text-xs font-medium text-text-muted">{status}</span>}
         </div>
       </div>
     </div>

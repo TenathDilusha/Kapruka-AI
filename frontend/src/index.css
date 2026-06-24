@@ -2,6 +2,16 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-brand-purple: #6610f2;
+  --color-brand-purple-dark: #520dc2;
+  --color-brand-gold: #ffc107;
+  --color-brand-gold-dark: #e6ac00;
+  --color-brand-purple-light: #f3ebff;
+  --color-brand-purple-muted: #e2d4fc;
+  --color-ink: #0e0f17;
+  --color-text-primary: #1e1033;
+  --color-text-muted: #6c757d;
+  --color-border: #ececf3;
 }
 
 * {
@@ -17,15 +27,29 @@ body,
 
 body {
   font-family: var(--font-sans);
-  background: #0c0a09;
-  color: #f5f5f4;
+  background: #ffffff;
+  color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
+}
+
+/* App backdrop — soft premium gradient wash */
+.tharu-backdrop {
+  background:
+    radial-gradient(1100px 520px at 12% -8%, rgba(102, 16, 242, 0.1), transparent 60%),
+    radial-gradient(900px 460px at 92% 0%, rgba(255, 193, 7, 0.12), transparent 55%),
+    linear-gradient(180deg, #faf8ff 0%, #ffffff 38%);
 }
 
 .scrollbar-thin::-webkit-scrollbar {
   height: 6px;
+  width: 6px;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #44403c;
+  background: var(--color-brand-purple-muted);
   border-radius: 999px;
+}
+
+@keyframes tharu-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
