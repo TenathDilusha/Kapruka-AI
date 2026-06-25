@@ -1,9 +1,20 @@
 import { Router } from "express";
 
+import { getGiftOptions } from "../services/gift-options.js";
 import { handleChatMessage, handleCheckout } from "../services/orchestrator.js";
 import { getCart } from "../services/session-store.js";
 
 export const chatRouter = Router();
+
+chatRouter.get("/options", async (_req, res) => {
+  try {
+    const options = await getGiftOptions();
+    res.json({ options });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to load options" });
+  }
+});
 
 chatRouter.post("/", async (req, res) => {
   try {

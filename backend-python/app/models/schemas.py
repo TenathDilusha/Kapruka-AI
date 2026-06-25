@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -70,11 +70,35 @@ class ConversationResult(BaseModel):
     follow_up_questions: list[str] = Field(default_factory=list)
 
 
+class KaprukaProduct(BaseModel):
+    id: str
+    name: str
+    summary: str | None = None
+    price: dict[str, Any] = Field(default_factory=dict)
+    image_url: str | None = None
+    url: str | None = None
+    in_stock: bool = True
+    category: dict[str, Any] | None = None
+
+
+class EnrichedBundle(GiftBundle):
+    products: list[KaprukaProduct] = Field(default_factory=list)
+
+
+class RouterDecision(BaseModel):
+    next_agent: Literal["intent", "gift_designer", "commerce", "conversation", "finish"]
+    reason: str = ""
+
+
 class AgentResponse(BaseModel):
     intent: IntentResult
     product_strategy: ProductStrategyResult
     gift_bundles: GiftDesignerResult
     conversation: ConversationResult
+    products: list[KaprukaProduct] = Field(default_factory=list)
+    bundles: list[EnrichedBundle] = Field(default_factory=list)
     needs_mcp_search: bool = False
     needs_checkout: bool = False
     suggested_cart_action: Literal["add", "checkout", "none"] = "none"
+    agent_trace: list[str] = Field(default_factory=list)
+    memory_summary: dict[str, Any] = Field(default_factory=dict)

@@ -1,16 +1,17 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Cake, Flower2, Gift, Heart, Send, ShoppingBag, Sparkles, Truck } from "lucide-react";
+import { ExternalLink, Gift, Send, ShoppingBag, Sparkles, Truck } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 import { ChatBubble, TypingIndicator } from "@/components/chat/ChatBubble";
+import { GiftOptionsStrip } from "@/components/chat/GiftOptionCard";
 import { TharuAvatar } from "@/components/mascot";
 import type { TharuState } from "@/components/mascot";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { addToCart, streamMessage } from "@/lib/api";
+import { addToCart, fetchGiftOptions, streamMessage } from "@/lib/api";
 import { cn, formatPrice } from "@/lib/utils";
-import type { CartItem, ChatMessage, Product } from "@/types";
+import type { CartItem, ChatMessage, GiftOption, Product } from "@/types";
 
 const WELCOME: ChatMessage = {
   id: "welcome",
@@ -20,13 +21,6 @@ const WELCOME: ChatMessage = {
   timestamp: Date.now(),
   status: "done",
 };
-
-const SUGGESTIONS = [
-  { icon: Cake, label: "Birthday gift for mom under 5000", short: "Birthday for mom" },
-  { icon: Heart, label: "Anniversary roses and chocolates", short: "Anniversary roses" },
-  { icon: Gift, label: "Valentine gift mokakda hari?", short: "Valentine ideas" },
-  { icon: Flower2, label: "Wedding gift ideas", short: "Wedding gifts" },
-];
 
 const TRUST = [
   { icon: ShoppingBag, label: "Live Kapruka catalog" },
@@ -42,14 +36,35 @@ export function ChatApp() {
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState<string>();
   const [inputFocused, setInputFocused] = useState(false);
+  const [giftOptions, setGiftOptions] = useState<GiftOption[]>([]);
+  const [optionsLoading, setOptionsLoading] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<(() => void) | null>(null);
 
   const isWelcome = messages.length === 1;
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading, statusText]);
+    let cancelled = false;
+    fetchGiftOptions()
+      .then((options) => {
+        if (!cancelled) setGiftOptions(options);
+      })
+      .catch(() => {
+        if (!cancelled) setGiftOptions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setOptionsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isWelcome) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, loading, statusText, isWelcome]);
 
   const heroState: TharuState = loading ? "thinking" : inputFocused || input.length > 0 ? "typing" : "idle";
 
@@ -126,46 +141,59 @@ export function ChatApp() {
             <p className="text-xs text-text-muted">Your star for finding the perfect gift</p>
           </div>
 
-          <AnimatePresence>
-            {cartCount > 0 && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8, y: -6 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                className="flex items-center gap-2 rounded-full border border-brand-purple/15 bg-white px-3 py-1.5 text-sm shadow-sm"
-              >
-                <span className="relative flex h-7 w-7 items-center justify-center rounded-full bg-brand-purple text-white">
-                  <ShoppingBag className="h-3.5 w-3.5" />
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-gold px-1 text-[10px] font-bold text-text-primary">
-                    {cartCount}
+          <div className="flex items-center gap-2">
+            <AnimatePresence>
+              {cartCount > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8, y: -6 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="flex items-center gap-2 rounded-full border border-brand-purple/15 bg-white px-3 py-1.5 text-sm shadow-sm"
+                >
+                  <span className="relative flex h-7 w-7 items-center justify-center rounded-full bg-brand-purple text-white">
+                    <ShoppingBag className="h-3.5 w-3.5" />
+                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-gold px-1 text-[10px] font-bold text-text-primary">
+                      {cartCount}
+                    </span>
                   </span>
-                </span>
-                <span className="font-semibold text-brand-purple">{formatPrice(cartTotal)}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  <span className="font-semibold text-brand-purple">{formatPrice(cartTotal)}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <Button variant="outline" size="sm" className="hidden gap-1.5 sm:inline-flex" asChild>
+              <a href="https://www.kapruka.com/" target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-3.5 w-3.5" />
+                Kapruka
+              </a>
+            </Button>
+            <Button variant="outline" size="icon" className="h-9 w-9 sm:hidden" asChild>
+              <a
+                href="https://www.kapruka.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Visit Kapruka.com"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </Button>
+          </div>
         </div>
       </header>
 
-      {/* Conversation */}
-      <ScrollArea className="flex-1 px-4">
-        <div className="mx-auto max-w-3xl pb-8 pt-6">
-          {isWelcome && (
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="mb-8 flex flex-col items-center text-center"
-            >
-              <TharuAvatar size={120} state={heroState} interactive />
-              <h2 className="mt-5 text-2xl font-bold tracking-tight">
+      {/* Main content */}
+      {isWelcome ? (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="relative min-h-0 flex-1">
+            <TharuAvatar variant="hero" state={heroState} className="absolute inset-0" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-white via-white/90 to-transparent px-4 pb-4 pt-16 text-center">
+              <h2 className="text-xl font-bold tracking-tight sm:text-2xl">
                 Find the <span className="text-brand-purple">perfect gift</span>, effortlessly
               </h2>
-              <p className="mt-2 max-w-md text-sm text-text-muted">
-                Chat with Tharu in English, සිංහල, or Singlish. Tap me — I'm watching! 👀
+              <p className="mx-auto mt-2 max-w-lg text-sm text-text-muted">
+                {WELCOME.content}
               </p>
-
-              <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
                 {TRUST.map(({ icon: Icon, label }) => (
                   <span key={label} className="flex items-center gap-1.5 text-xs font-medium text-text-muted">
                     <Icon className="h-3.5 w-3.5 text-brand-purple" />
@@ -173,10 +201,22 @@ export function ChatApp() {
                   </span>
                 ))}
               </div>
-            </motion.div>
-          )}
+            </div>
+          </div>
 
-          <div className="space-y-6">
+          <div className="shrink-0 border-t border-white/70 bg-white/85 px-4 py-3 backdrop-blur-md">
+            <div className="mx-auto max-w-3xl">
+              <GiftOptionsStrip
+                options={giftOptions}
+                loading={optionsLoading}
+                onSelect={handleSend}
+              />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <ScrollArea className="flex-1 px-4">
+          <div className="mx-auto max-w-3xl space-y-6 pb-8 pt-6">
             <AnimatePresence initial={false}>
               {messages.map((msg) => (
                 <motion.div
@@ -190,33 +230,14 @@ export function ChatApp() {
               ))}
             </AnimatePresence>
             {loading && <TypingIndicator status={statusText} />}
+            <div ref={bottomRef} />
           </div>
-          <div ref={bottomRef} />
-        </div>
-      </ScrollArea>
+        </ScrollArea>
+      )}
 
       {/* Composer */}
       <footer className="border-t border-white/60 bg-white/70 backdrop-blur-xl">
         <div className="mx-auto max-w-3xl px-4 py-4">
-          {isWelcome && (
-            <div className="mb-3 flex flex-wrap justify-center gap-2">
-              {SUGGESTIONS.map(({ icon: Icon, label, short }) => (
-                <motion.button
-                  key={label}
-                  type="button"
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => handleSend(label)}
-                  className="group flex items-center gap-1.5 rounded-full border border-brand-purple/20 bg-white px-3.5 py-2 text-xs font-medium text-text-primary shadow-sm transition hover:border-brand-purple hover:bg-brand-purple-light"
-                >
-                  <Icon className="h-3.5 w-3.5 text-brand-purple" />
-                  <span className="sm:hidden">{short}</span>
-                  <span className="hidden sm:inline">{label}</span>
-                </motion.button>
-              ))}
-            </div>
-          )}
-
           <form
             className={cn(
               "flex items-center gap-2 rounded-2xl border bg-white p-1.5 pl-4 shadow-sm transition",

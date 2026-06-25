@@ -1,37 +1,61 @@
 import { v4 as uuidv4 } from "uuid";
 
 import type { CartItem, ChatMessage, GiftBundle, Product } from "../types/index.js";
-import { createOrder, searchProducts } from "./kapruka-mcp.js";
 import { callPythonAgent } from "./python-agent.js";
 import { addToCart, getCart, getOrCreateSession } from "./session-store.js";
 
-function dedupeProducts(products: Product[]): Product[] {
-  const seen = new Set<string>();
-  return products.filter((p) => {
-    if (seen.has(p.id)) return false;
-    seen.add(p.id);
-    return true;
-  });
+function mapProducts(raw: Array<{
+  id: string;
+  name: string;
+  summary?: string;
+  price: { amount: number | null; currency: string };
+  image_url?: string | null;
+  url?: string;
+  in_stock: boolean;
+  category?: { name: string };
+}>): Product[] {
+  return raw.map((p) => ({
+    id: p.id,
+    name: p.name,
+    summary: p.summary,
+    price: p.price,
+    image_url: p.image_url,
+    url: p.url,
+    in_stock: p.in_stock,
+    category: p.category,
+  }));
 }
 
-async function searchBundleProducts(bundles: GiftBundle[]): Promise<GiftBundle[]> {
-  const enriched: GiftBundle[] = [];
-
-  for (const bundle of bundles) {
-    const products: Product[] = [];
-    for (const item of bundle.items.slice(0, 2)) {
-      const results = await searchProducts({
-        q: item.search_query,
-        category: item.category ?? undefined,
-        limit: 3,
-      });
-      products.push(...results);
-    }
-    enriched.push({ ...bundle, products: dedupeProducts(products).slice(0, 6) });
-  }
-
-  return enriched;
+function mapBundles(
+  bundles: AgentResultBundles,
+): GiftBundle[] {
+  return bundles.map((b) => ({
+    id: b.id,
+    theme: b.theme,
+    occasion: b.occasion,
+    emotional_description: b.emotional_description,
+    items: b.items,
+    estimated_budget: b.estimated_budget,
+    products: b.products ? mapProducts(b.products) : undefined,
+  }));
 }
+
+type AgentResultBundles = Array<{
+  id: string;
+  theme: string;
+  occasion: string;
+  emotional_description: string;
+  items: Array<{ label: string; search_query: string; category?: string }>;
+  estimated_budget?: string;
+  products?: Array<{
+    id: string;
+    name: string;
+    price: { amount: number | null; currency: string };
+    image_url?: string | null;
+    url?: string;
+    in_stock: boolean;
+  }>;
+}>;
 
 export interface OrchestratorResult {
   sessionId: string;
@@ -46,7 +70,6 @@ export async function handleChatMessage(
   action?: { type: "add_to_cart"; productId: string; name: string; price: number; currency: string; image_url?: string },
 ): Promise<OrchestratorResult> {
   const session = getOrCreateSession(sessionId);
-  const statusUpdates: string[] = [];
 
   if (action?.type === "add_to_cart") {
     addToCart(session.id, {
@@ -67,11 +90,12 @@ export async function handleChatMessage(
     };
     session.messages.push({ role: "user", content: `Add ${action.name} to cart` });
     session.messages.push({ role: "assistant", content: msg.content });
-    return { sessionId: session.id, message: msg, cart, statusUpdates };
+    return { sessionId: session.id, message: msg, cart, statusUpdates: [] };
   }
 
   session.messages.push({ role: "user", content: userMessage });
-  statusUpdates.push("Understanding your request...");
+
+  const statusUpdates: string[] = ["Routing to Tharu agents..."];
 
   const agent = await callPythonAgent({
     message: userMessage,
@@ -80,60 +104,25 @@ export async function handleChatMessage(
     cart_item_count: session.cart.length,
   });
 
-  statusUpdates.push("Crafting your gift ideas...");
-
-  let products: Product[] = [];
-  let bundles: GiftBundle[] = agent.gift_bundles.bundles.map((b) => ({
-    id: b.id,
-    theme: b.theme,
-    occasion: b.occasion,
-    emotional_description: b.emotional_description,
-    items: b.items,
-    estimated_budget: b.estimated_budget,
-  }));
-
-  if (agent.needs_mcp_search && agent.product_strategy.searches.length > 0) {
-    statusUpdates.push("Searching Kapruka catalog...");
-    for (const search of agent.product_strategy.searches.slice(0, 3)) {
-      const results = await searchProducts({
-        q: search.query,
-        category: search.category,
-        max_price: search.max_price,
-        limit: 5,
-      });
-      products.push(...results);
-    }
-    products = dedupeProducts(products).slice(0, 12);
+  for (const step of agent.agent_trace ?? []) {
+    const labels: Record<string, string> = {
+      intent: "Understanding your request...",
+      gift_designer: "Designing gift bundles...",
+      commerce: "Searching Kapruka catalog...",
+      conversation: "Composing your reply...",
+    };
+    if (labels[step]) statusUpdates.push(labels[step]);
   }
 
-  if (bundles.length > 0) {
-    statusUpdates.push("Building gift bundles...");
-    bundles = await searchBundleProducts(bundles);
-  }
-
-  let checkoutUrl: string | undefined;
-  let orderRef: string | undefined;
-  let content = agent.conversation.message;
-
-  if (agent.needs_checkout && session.cart.length > 0) {
-    statusUpdates.push("Preparing checkout...");
-    // Demo checkout requires full delivery details — guide user if missing
-    content +=
-      "\n\nTo complete checkout, please share: recipient name & phone, delivery address & city, delivery date (YYYY-MM-DD), and your name as sender.";
-  }
-
-  if (agent.conversation.follow_up_questions.length > 0 && products.length === 0) {
-    content += "\n\n" + agent.conversation.follow_up_questions.slice(0, 2).map((q) => `• ${q}`).join("\n");
-  }
+  const products = mapProducts(agent.products ?? []);
+  const bundles = mapBundles(agent.bundles?.length ? agent.bundles : agent.gift_bundles.bundles);
 
   const assistantMsg: ChatMessage = {
     id: uuidv4(),
     role: "assistant",
-    content,
+    content: agent.conversation.message,
     products: products.length > 0 ? products : undefined,
     bundles: bundles.length > 0 ? bundles : undefined,
-    checkoutUrl,
-    orderRef,
     timestamp: Date.now(),
     status: "done",
   };
@@ -164,6 +153,8 @@ export async function handleCheckout(
     throw new Error("Cart is empty");
   }
 
+  // Checkout still initiated via Express → can move to Python commerce agent later
+  const { createOrder } = await import("./kapruka-mcp.js");
   const order = await createOrder({
     cart: cart.map((c) => ({ product_id: c.product_id, quantity: c.quantity })),
     recipient: details.recipient,

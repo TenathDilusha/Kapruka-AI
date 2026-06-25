@@ -11,8 +11,10 @@ export type TharuState =
   | "loading";
 
 export interface TharuAvatarProps {
-  /** Pixel size (width & height). Default 48 */
+  /** Pixel size (width & height). Default 48 — ignored when variant is hero */
   size?: number;
+  /** circle = small round avatar, hero = full-area welcome video */
+  variant?: "circle" | "hero";
   state?: TharuState;
   showParticles?: boolean;
   /** 0–1 glow strength. Default 0.6 */

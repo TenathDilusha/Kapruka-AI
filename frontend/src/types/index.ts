@@ -52,3 +52,14 @@ export interface ChatResponse {
   cart: CartItem[];
   statusUpdates?: string[];
 }
+
+export interface GiftOption {
+  id: string;
+  label: string;
+  short: string;
+  prompt: string;
+  query: string;
+  image_url: string | null;
+  sample_product: string | null;
+  price: { amount: number | null; currency: string } | null;
+}

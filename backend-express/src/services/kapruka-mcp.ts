@@ -47,6 +47,7 @@ async function mcpRpc(
     method: "POST",
     headers,
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(20_000),
   });
 
   const newSessionId = res.headers.get("mcp-session-id") ?? sessionId ?? "";
@@ -66,19 +67,32 @@ async function mcpRpc(
 }
 
 let mcpSessionId: string | undefined;
+let sessionInit: Promise<string> | undefined;
+
+function resetMcpSession(): void {
+  mcpSessionId = undefined;
+  sessionInit = undefined;
+}
 
 async function ensureSession(): Promise<string> {
   if (mcpSessionId) return mcpSessionId;
-
-  const init = await mcpRpc("initialize", {
-    protocolVersion: "2024-11-05",
-    capabilities: {},
-    clientInfo: { name: "tharu-ai", version: "1.0.0" },
-  });
-  mcpSessionId = init.sessionId;
-
-  await mcpRpc("notifications/initialized", {}, mcpSessionId, true);
-  return mcpSessionId;
+  if (!sessionInit) {
+    sessionInit = (async () => {
+      const init = await mcpRpc("initialize", {
+        protocolVersion: "2024-11-05",
+        capabilities: {},
+        clientInfo: { name: "tharu-ai", version: "1.0.0" },
+      });
+      const sid = init.sessionId;
+      await mcpRpc("notifications/initialized", {}, sid, true);
+      mcpSessionId = sid;
+      return sid;
+    })().catch((err) => {
+      resetMcpSession();
+      throw err;
+    });
+  }
+  return sessionInit;
 }
 
 function extractText(result: McpResult): string {
@@ -97,36 +111,47 @@ export interface KaprukaProduct {
   category?: { name: string };
 }
 
+function mcpToolArgs(params: Record<string, unknown>): Record<string, unknown> {
+  return { params };
+}
+
 export async function searchProducts(args: {
   q: string;
   category?: string;
   max_price?: number;
   limit?: number;
 }): Promise<KaprukaProduct[]> {
-  const sessionId = await ensureSession();
-  const { result } = await mcpRpc(
-    "tools/call",
-    {
-      name: "kapruka_search_products",
-      arguments: {
-        q: args.q,
-        category: args.category,
-        max_price: args.max_price,
-        limit: args.limit ?? 6,
-        in_stock_only: true,
-        response_format: "json",
-      },
-    },
-    sessionId,
-  );
-
-  const text = extractText(result);
-  if (!text || text.startsWith("Error:")) return [];
+  const searchParams: Record<string, unknown> = {
+    q: args.q,
+    limit: args.limit ?? 6,
+    in_stock_only: true,
+    response_format: "json",
+  };
+  if (args.category) searchParams.category = args.category;
+  if (args.max_price !== undefined) searchParams.max_price = args.max_price;
 
   try {
-    const data = JSON.parse(text) as { results: KaprukaProduct[] };
-    return data.results ?? [];
+    const sessionId = await ensureSession();
+    const { result } = await mcpRpc(
+      "tools/call",
+      {
+        name: "kapruka_search_products",
+        arguments: mcpToolArgs(searchParams),
+      },
+      sessionId,
+    );
+
+    const text = extractText(result);
+    if (!text || text.startsWith("Error:")) return [];
+
+    try {
+      const data = JSON.parse(text) as { results: KaprukaProduct[] };
+      return data.results ?? [];
+    } catch {
+      return [];
+    }
   } catch {
+    resetMcpSession();
     return [];
   }
 }
@@ -149,7 +174,7 @@ export async function createOrder(args: {
     "tools/call",
     {
       name: "kapruka_create_order",
-      arguments: { ...args, response_format: "json" },
+      arguments: mcpToolArgs({ ...args, response_format: "json" }),
     },
     sessionId,
   );
@@ -172,7 +197,7 @@ export async function checkDelivery(args: {
     "tools/call",
     {
       name: "kapruka_check_delivery",
-      arguments: { ...args, response_format: "json" },
+      arguments: mcpToolArgs({ ...args, response_format: "json" }),
     },
     sessionId,
   );
