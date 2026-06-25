@@ -7,6 +7,17 @@ export interface AgentPayload {
   cart_item_count: number;
 }
 
+export interface KaprukaProduct {
+  id: string;
+  name: string;
+  summary?: string;
+  price: { amount: number | null; currency: string };
+  image_url?: string | null;
+  url?: string;
+  in_stock: boolean;
+  category?: { name: string };
+}
+
 export interface AgentResult {
   intent: {
     occasion: string | null;
@@ -26,6 +37,7 @@ export interface AgentResult {
       emotional_description: string;
       items: Array<{ label: string; search_query: string; category?: string }>;
       estimated_budget?: string;
+      products?: KaprukaProduct[];
     }>;
   };
   conversation: {
@@ -33,9 +45,21 @@ export interface AgentResult {
     language: string;
     follow_up_questions: string[];
   };
+  products: KaprukaProduct[];
+  bundles: Array<{
+    id: string;
+    theme: string;
+    occasion: string;
+    emotional_description: string;
+    items: Array<{ label: string; search_query: string; category?: string }>;
+    estimated_budget?: string;
+    products?: KaprukaProduct[];
+  }>;
   needs_mcp_search: boolean;
   needs_checkout: boolean;
   suggested_cart_action: string;
+  agent_trace: string[];
+  memory_summary: Record<string, unknown>;
 }
 
 export async function callPythonAgent(payload: AgentPayload): Promise<AgentResult> {

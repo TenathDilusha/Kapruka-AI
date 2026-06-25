@@ -1,6 +1,13 @@
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
-import type { ChatMessage, ChatResponse, CartItem } from "../types";
+import type { ChatMessage, ChatResponse, CartItem, GiftOption } from "../types";
+
+export async function fetchGiftOptions(): Promise<GiftOption[]> {
+  const res = await fetch(`${API_URL}/api/chat/options`);
+  if (!res.ok) throw new Error("Failed to load gift options");
+  const data = (await res.json()) as { options: GiftOption[] };
+  return data.options ?? [];
+}
 
 export async function sendMessage(
   message: string,
@@ -86,4 +93,4 @@ export function streamMessage(
   return () => controller.abort();
 }
 
-export type { ChatMessage, ChatResponse, CartItem };
+export type { ChatMessage, ChatResponse, CartItem, GiftOption };
