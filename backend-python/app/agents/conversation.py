@@ -36,12 +36,19 @@ def run_conversation_agent(
 
     if product_count > 0:
         if lang == "si":
-            msg = f"මෙන්න ඔබට ගැලපෙන තෝරාගැනීම් {product_count}ක්! ඕනෑම එකක් cart එකට දාන්න පුළුවන්."
+            msg = f"මෙන්න ඔබට ගැලපෙන තෝරාගැනීම් {product_count}ක්! ඕනෑම එකක් cart එකට දාන්න — multi-item order එකක් හදන්න පුළුවන්."
         elif lang == "singlish":
-            msg = f"Meka balanna — {product_count} options hariyata match wela. Cart ekata add karanna puluwan!"
+            msg = f"Meka balanna machan — {product_count} options match wela. Cart ekata add karanna, multi-item order ekak hadanna puluwan!"
         else:
-            msg = f"I found {product_count} picks that match what you're looking for. Tap any product to add it to your cart."
-        return ConversationResult(message=msg, language=lang, tone="excited")  # type: ignore[arg-type]
+            msg = f"I found {product_count} picks for you. Add several to your cart — we'll ship them together in one Kapruka order."
+        return ConversationResult(
+            message=msg,
+            language=lang,
+            tone="excited",
+            follow_up_questions=[
+                "Want a gift message on the card?" if lang == "en" else "Gift message ekak oneda?" if lang == "singlish" else "Gift message එකක් ඕනද?",
+            ],
+        )  # type: ignore[arg-type]
 
     if gifts.bundles:
         primary = gifts.bundles[0]

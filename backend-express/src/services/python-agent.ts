@@ -5,6 +5,7 @@ export interface AgentPayload {
   session_id: string;
   history: Array<{ role: "user" | "assistant"; content: string }>;
   cart_item_count: number;
+  language_hint?: "en" | "si" | "singlish";
 }
 
 export interface KaprukaProduct {

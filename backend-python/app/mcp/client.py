@@ -10,6 +10,7 @@ from app.config import get_settings
 
 _settings = get_settings()
 MCP_URL = _settings.kapruka_mcp_url
+MCP_BASE = MCP_URL.rstrip("/").removesuffix("/mcp")
 
 
 def _parse_body(text: str) -> dict[str, Any]:
@@ -30,6 +31,15 @@ def _extract_text(result: dict[str, Any]) -> str:
         if block.get("type") == "text":
             return block.get("text") or ""
     return ""
+
+
+def _parse_json(text: str) -> Any:
+    if not text or text.startswith("Error"):
+        return None
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return None
 
 
 class KaprukaMCPClient:
@@ -91,8 +101,11 @@ class KaprukaMCPClient:
         q: str,
         *,
         category: str | None = None,
+        min_price: float | None = None,
         max_price: float | None = None,
         limit: int = 6,
+        sort: str | None = None,
+        cursor: str | None = None,
     ) -> list[dict[str, Any]]:
         args: dict[str, Any] = {
             "q": q,
@@ -102,26 +115,49 @@ class KaprukaMCPClient:
         }
         if category:
             args["category"] = category
+        if min_price is not None:
+            args["min_price"] = min_price
         if max_price is not None:
             args["max_price"] = max_price
+        if sort:
+            args["sort"] = sort
+        if cursor:
+            args["cursor"] = cursor
 
         text = self.call_tool("kapruka_search_products", {"params": args})
-        if not text or text.startswith("Error:"):
-            return []
-        try:
-            data = json.loads(text)
+        data = _parse_json(text)
+        if isinstance(data, dict):
             return data.get("results") or []
-        except json.JSONDecodeError:
-            return []
+        return []
 
-    def list_categories(self) -> list[str]:
-        text = self.call_tool("kapruka_list_categories", {"params": {"response_format": "json"}})
-        try:
-            data = json.loads(text)
-            if isinstance(data, list):
-                return [c.get("name", "") for c in data if c.get("name")]
-        except json.JSONDecodeError:
-            pass
+    def get_product(self, product_id: str, currency: str = "LKR") -> dict[str, Any] | None:
+        text = self.call_tool(
+            "kapruka_get_product",
+            {"params": {"product_id": product_id, "currency": currency, "response_format": "json"}},
+        )
+        data = _parse_json(text)
+        return data if isinstance(data, dict) else None
+
+    def list_categories(self, depth: int = 1) -> list[dict[str, Any]]:
+        text = self.call_tool(
+            "kapruka_list_categories",
+            {"params": {"depth": depth, "response_format": "json"}},
+        )
+        data = _parse_json(text)
+        if isinstance(data, dict):
+            return data.get("categories") or []
+        if isinstance(data, list):
+            return data
+        return []
+
+    def list_delivery_cities(self, query: str, limit: int = 20) -> list[dict[str, Any]]:
+        text = self.call_tool(
+            "kapruka_list_delivery_cities",
+            {"params": {"query": query, "limit": limit, "response_format": "json"}},
+        )
+        data = _parse_json(text)
+        if isinstance(data, dict):
+            return data.get("cities") or []
         return []
 
     def check_delivery(self, city: str, delivery_date: str, product_id: str | None = None) -> dict[str, Any]:
@@ -133,10 +169,26 @@ class KaprukaMCPClient:
         if product_id:
             args["product_id"] = product_id
         text = self.call_tool("kapruka_check_delivery", {"params": args})
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            return {"raw": text}
+        data = _parse_json(text)
+        return data if isinstance(data, dict) else {"raw": text}
+
+    def track_order(self, order_number: str) -> dict[str, Any]:
+        text = self.call_tool(
+            "kapruka_track_order",
+            {"params": {"order_number": order_number, "response_format": "json"}},
+        )
+        data = _parse_json(text)
+        return data if isinstance(data, dict) else {"raw": text, "order_number": order_number}
+
+    def get_health(self) -> dict[str, Any]:
+        res = self._client.get(f"{MCP_BASE}/health")
+        res.raise_for_status()
+        return res.json()
+
+    def get_stats(self) -> dict[str, Any]:
+        res = self._client.get(f"{MCP_BASE}/stats")
+        res.raise_for_status()
+        return res.json()
 
 
 _mcp_client: KaprukaMCPClient | None = None

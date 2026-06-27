@@ -24,7 +24,11 @@ RELATIONSHIPS = {
     "colleague": ["colleague", "boss", "coworker", "office"],
 }
 
-SINGLISH_MARKERS = ["mokak", "dan", "hari", "nane", "kohomada", "aiyoo", "machan", "bro", "deyak", "gift ekak"]
+SINGLISH_MARKERS = [
+    "mokak", "dan", "hari", "nane", "kohomada", "aiyoo", "machan", "bro", "deyak",
+    "gift ekak", "ekak", "yanna", "ganna", "dannam", "kattiya", "la", "ne", "deyak",
+    "mokada", "kohomada", "puluvan", "onada", "denna", "balanna", "hondai", "na",
+]
 
 
 def _detect_language(text: str) -> str:

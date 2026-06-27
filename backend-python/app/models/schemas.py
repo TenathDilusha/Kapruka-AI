@@ -15,7 +15,7 @@ class AgentRequest(BaseModel):
     session_id: str
     history: list[ChatMessage] = Field(default_factory=list)
     cart_item_count: int = 0
-    language_hint: str | None = None
+    language_hint: Literal["en", "si", "singlish"] | None = None
 
 
 class IntentResult(BaseModel):
