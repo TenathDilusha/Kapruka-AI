@@ -7,21 +7,21 @@ import type { GiftBundle, Product } from "@/types";
 interface BundleCardProps {
   bundle: GiftBundle;
   onAdd: (product: Product) => void;
+  onViewProduct?: (product: Product) => void;
 }
 
-export function BundleCard({ bundle, onAdd }: BundleCardProps) {
+export function BundleCard({ bundle, onAdd, onViewProduct }: BundleCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.97 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.35 }}
-      className="overflow-hidden rounded-2xl border border-brand-purple/15 bg-white shadow-sm"
+      className="overflow-hidden rounded-2xl border border-brand-purple/20 bg-white shadow-sm"
     >
-      {/* Themed header band */}
-      <div className="relative bg-gradient-to-r from-[#1b1430] to-[#0e0f17] px-4 py-3.5">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_85%_20%,rgba(255,216,77,0.18),transparent_55%)]" />
+      <div className="relative bg-gradient-to-r from-brand-purple via-[#7c3aed] to-[#9d4bff] px-4 py-3.5">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_90%_15%,rgba(255,193,7,0.35),transparent_50%)]" />
         <div className="relative flex items-start gap-3">
-          <div className="rounded-xl bg-brand-gold/15 p-2 text-brand-gold ring-1 ring-brand-gold/30">
+          <div className="rounded-xl bg-white/15 p-2 text-brand-gold ring-1 ring-white/25 backdrop-blur-sm">
             <Gift className="h-5 w-5" />
           </div>
           <div className="flex-1">
@@ -29,24 +29,26 @@ export function BundleCard({ bundle, onAdd }: BundleCardProps) {
               <h3 className="font-bold text-white">{bundle.theme}</h3>
               <Sparkles className="h-3.5 w-3.5 text-brand-gold" />
             </div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gold/80">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-brand-gold">
               {bundle.occasion}
             </p>
           </div>
         </div>
       </div>
 
-      <div className="p-4">
-        <p className="text-sm leading-relaxed text-text-primary/80">{bundle.emotional_description}</p>
+      <div className="space-y-4 bg-gradient-to-b from-brand-purple-light/40 to-white p-4">
+        <p className="text-sm leading-relaxed text-brand-purple/90">{bundle.emotional_description}</p>
         {bundle.estimated_budget && (
-          <p className="mt-1.5 text-xs font-medium text-text-muted">💰 {bundle.estimated_budget}</p>
+          <p className="inline-flex rounded-full bg-brand-gold/20 px-3 py-1 text-xs font-semibold text-[#7a5a00]">
+            {bundle.estimated_budget}
+          </p>
         )}
 
-        <div className="mt-3 mb-3 flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           {bundle.items.map((item) => (
             <span
               key={item.label}
-              className="rounded-full bg-brand-purple-light px-2.5 py-0.5 text-xs font-medium text-brand-purple"
+              className="rounded-full border border-brand-purple/15 bg-white px-2.5 py-0.5 text-xs font-medium text-brand-purple"
             >
               {item.label}
             </span>
@@ -54,7 +56,12 @@ export function BundleCard({ bundle, onAdd }: BundleCardProps) {
         </div>
 
         {bundle.products && bundle.products.length > 0 && (
-          <ProductCarousel products={bundle.products} onAdd={onAdd} />
+          <div className="space-y-2 border-t border-brand-purple/10 pt-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-brand-purple/70">
+              Curated products
+            </p>
+            <ProductCarousel products={bundle.products} onAdd={onAdd} onViewDetails={onViewProduct} />
+          </div>
         )}
       </div>
     </motion.div>

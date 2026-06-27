@@ -21,7 +21,15 @@ chatRouter.post("/", async (req, res) => {
     const { sessionId, message, action } = req.body as {
       sessionId?: string;
       message?: string;
-      action?: { type: "add_to_cart"; productId: string; name: string; price: number; currency: string; image_url?: string };
+      action?: {
+        type: "add_to_cart" | "remove_from_cart" | "update_cart";
+        productId: string;
+        name?: string;
+        price?: number;
+        currency?: string;
+        image_url?: string;
+        quantity?: number;
+      };
     };
 
     if (!message && !action) {
@@ -29,7 +37,9 @@ chatRouter.post("/", async (req, res) => {
       return;
     }
 
-    const result = await handleChatMessage(sessionId, message ?? "", action);
+    const result = await handleChatMessage(sessionId, message ?? "", action, {
+      languageHint: (req.body as { languageHint?: "en" | "si" | "singlish" }).languageHint,
+    });
     res.json(result);
   } catch (err) {
     console.error(err);
@@ -58,7 +68,11 @@ chatRouter.get("/cart/:sessionId", (req, res) => {
 
 // SSE streaming for status updates during chat
 chatRouter.post("/stream", async (req, res) => {
-  const { sessionId, message } = req.body as { sessionId?: string; message: string };
+  const { sessionId, message, languageHint } = req.body as {
+    sessionId?: string;
+    message: string;
+    languageHint?: "en" | "si" | "singlish";
+  };
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -75,7 +89,7 @@ chatRouter.post("/stream", async (req, res) => {
     const session = sessionId;
     send("status", { text: "Thinking..." });
 
-    const result = await handleChatMessage(session, message);
+    const result = await handleChatMessage(session, message, undefined, { languageHint });
     for (const update of result.statusUpdates) {
       send("status", { text: update });
     }

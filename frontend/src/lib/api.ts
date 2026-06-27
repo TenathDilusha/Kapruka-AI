@@ -31,10 +31,68 @@ export async function addToCart(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       sessionId,
-      action: { type: "add_to_cart", ...product },
+      action: {
+        type: "add_to_cart",
+        productId: product.productId,
+        name: product.name,
+        price: product.price,
+        currency: product.currency,
+        image_url: product.image_url,
+      },
     }),
   });
   if (!res.ok) throw new Error("Failed to add to cart");
+  return res.json();
+}
+
+export async function updateCartItem(
+  sessionId: string,
+  productId: string,
+  quantity: number,
+): Promise<ChatResponse> {
+  const res = await fetch(`${API_URL}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sessionId,
+      action: { type: "update_cart", productId, quantity },
+    }),
+  });
+  if (!res.ok) throw new Error("Failed to update cart");
+  return res.json();
+}
+
+export async function removeCartItem(sessionId: string, productId: string): Promise<ChatResponse> {
+  const res = await fetch(`${API_URL}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sessionId,
+      action: { type: "remove_from_cart", productId },
+    }),
+  });
+  if (!res.ok) throw new Error("Failed to remove item");
+  return res.json();
+}
+
+export async function submitCheckout(
+  sessionId: string,
+  details: {
+    recipient: { name: string; phone: string };
+    delivery: { address: string; city: string; date: string; instructions?: string };
+    sender: { name: string };
+    gift_message?: string;
+  },
+): Promise<ChatResponse> {
+  const res = await fetch(`${API_URL}/api/chat/checkout`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId, ...details }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? "Checkout failed");
+  }
   return res.json();
 }
 
@@ -44,13 +102,14 @@ export function streamMessage(
   onStatus: (text: string) => void,
   onResult: (data: ChatResponse) => void,
   onError: (err: string) => void,
+  languageHint?: "en" | "si" | "singlish",
 ) {
   const controller = new AbortController();
 
   fetch(`${API_URL}/api/chat/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sessionId, message }),
+    body: JSON.stringify({ sessionId, message, languageHint }),
     signal: controller.signal,
   }).then(async (res) => {
     if (!res.ok || !res.body) {

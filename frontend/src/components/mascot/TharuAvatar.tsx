@@ -1,10 +1,12 @@
 import { motion, type Transition } from "framer-motion";
+import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
 import type { TharuAvatarProps, TharuState } from "./types";
 
-const MASCOT_VIDEO = "/mascot.mp4";
+const KAPRUKA_LOGO = "/kapruka-logo.jpeg";
+const KAPRUKA_BG = "#3f2870";
 
 const floatTransition: Transition = {
   duration: 3.2,
@@ -13,22 +15,142 @@ const floatTransition: Transition = {
   ease: "easeInOut",
 };
 
+const heroFloatTransition: Transition = {
+  ...floatTransition,
+  delay: 1,
+};
+
+const introTransition: Transition = {
+  duration: 0.9,
+  ease: [0.22, 1, 0.36, 1],
+};
+
+const spinTransition: Transition = {
+  duration: 1.4,
+  repeat: Infinity,
+  ease: "linear",
+};
+
 function bodyMotion(state: TharuState) {
   switch (state) {
     case "excited":
     case "celebrating":
-      return { y: [0, -8, 0], rotate: [-2, 2, -2] };
+      return { y: [0, -8, 0], scale: [1, 1.02, 1] };
     case "happy":
     case "success":
       return { y: [0, -6, 0], scale: [1, 1.03, 1] };
     case "thinking":
     case "loading":
-      return { y: [0, -4, 0] };
+      return { y: 0, opacity: 1 };
     case "surprised":
       return { scale: [1, 1.06, 1] };
     default:
       return { y: [0, -5, 0] };
   }
+}
+
+/** Yellow eyes overlaid on the Kapruka cart face JPEG — blink in sync. */
+function MascotEyes({ compact = false }: { compact?: boolean }) {
+  const eyeSize = compact ? "14%" : "13.5%";
+  const positions = compact
+    ? [
+        { left: "27%", top: "33%" },
+        { left: "59%", top: "33%" },
+      ]
+    : [
+        { left: "26.5%", top: "34%" },
+        { left: "58.5%", top: "34%" },
+      ];
+
+  return (
+    <div className="pointer-events-none absolute inset-0" aria-hidden>
+      {positions.map((pos, i) => (
+        <span
+          key={i}
+          className="absolute rounded-full bg-brand-gold"
+          style={{
+            left: pos.left,
+            top: pos.top,
+            width: eyeSize,
+            height: eyeSize,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function KaprukaCartFace({
+  className,
+  state,
+  compact = false,
+  blend = false,
+  animate = false,
+  floatDelay = false,
+}: {
+  className?: string;
+  state: TharuState;
+  compact?: boolean;
+  blend?: boolean;
+  animate?: boolean;
+  floatDelay?: boolean;
+}) {
+  const face = (
+    <div
+      className={cn(
+        "relative aspect-square",
+        blend ? "overflow-visible rounded-none" : "overflow-hidden rounded-2xl",
+        className,
+      )}
+      style={{ backgroundColor: KAPRUKA_BG }}
+    >
+      <img src={KAPRUKA_LOGO} alt="" className="h-full w-full object-contain" aria-hidden />
+      <MascotEyes compact={compact} />
+    </div>
+  );
+
+  if (animate) {
+    return (
+      <motion.div
+        animate={bodyMotion(state)}
+        transition={floatDelay ? heroFloatTransition : floatTransition}
+      >
+        {face}
+      </motion.div>
+    );
+  }
+
+  return face;
+}
+
+function SpinWrapper({ children, active }: { children: ReactNode; active: boolean }) {
+  if (!active) return <>{children}</>;
+  return (
+    <motion.div animate={{ rotate: 360 }} transition={spinTransition}>
+      {children}
+    </motion.div>
+  );
+}
+
+/** Spinning Kapruka cart logo — use for loading states. */
+export function KaprukaLogoSpinner({
+  size = 44,
+  className,
+}: {
+  size?: number;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      className={cn("relative shrink-0", className)}
+      style={{ width: size, height: size }}
+      animate={{ rotate: 360 }}
+      transition={spinTransition}
+      aria-hidden
+    >
+      <KaprukaCartFace compact blend className="h-full w-full" />
+    </motion.div>
+  );
 }
 
 export function TharuAvatar({
@@ -37,34 +159,31 @@ export function TharuAvatar({
   state = "idle",
   interactive = false,
   className,
-  "aria-label": ariaLabel = "Tharu, your Kapruka gift mascot",
+  "aria-label": ariaLabel = "Kapruka cart mascot",
 }: TharuAvatarProps) {
+  const isLoading = state === "thinking" || state === "loading";
+
   if (variant === "hero") {
     return (
-      <div
+      <motion.div
         role="img"
         aria-label={ariaLabel}
-        className={cn("relative h-full w-full overflow-hidden bg-white", className)}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={introTransition}
+        className={cn("relative flex h-full w-full items-center justify-center", className)}
+        style={{ backgroundColor: KAPRUKA_BG }}
       >
-        <video
-          src={MASCOT_VIDEO}
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="h-full w-full object-contain object-center"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute inset-0"
-          aria-hidden
-        >
-          <div className="absolute inset-y-0 left-0 w-[min(22%,10rem)] bg-gradient-to-r from-white via-white/85 to-transparent" />
-          <div className="absolute inset-y-0 right-0 w-[min(22%,10rem)] bg-gradient-to-l from-white via-white/85 to-transparent" />
-          <div className="absolute inset-x-0 top-0 h-[min(16%,5rem)] bg-gradient-to-b from-white via-white/75 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 h-[min(20%,6rem)] bg-gradient-to-t from-white via-white/70 to-transparent" />
-        </div>
-      </div>
+        <SpinWrapper active={isLoading}>
+          <KaprukaCartFace
+            state={state}
+            blend
+            animate={!isLoading}
+            floatDelay
+            className="max-h-[min(52vh,20rem)] max-w-[min(72vw,20rem)]"
+          />
+        </SpinWrapper>
+      </motion.div>
     );
   }
 
@@ -74,20 +193,14 @@ export function TharuAvatar({
       aria-label={ariaLabel}
       className={cn("relative inline-flex shrink-0 items-center justify-center", className)}
       style={{ width: size, height: size }}
-      animate={bodyMotion(state)}
+      animate={isLoading ? undefined : bodyMotion(state)}
       transition={floatTransition}
-      whileHover={interactive ? { scale: 1.04 } : undefined}
-      whileTap={interactive ? { scale: 0.96 } : undefined}
+      whileHover={interactive && !isLoading ? { scale: 1.04 } : undefined}
+      whileTap={interactive && !isLoading ? { scale: 0.96 } : undefined}
     >
-      <video
-        src={MASCOT_VIDEO}
-        autoPlay
-        loop
-        muted
-        playsInline
-        className="h-full w-full rounded-full object-cover bg-white shadow-md ring-2 ring-brand-gold/30"
-        aria-hidden
-      />
+      <SpinWrapper active={isLoading}>
+        <KaprukaCartFace state={state} compact className="h-full w-full rounded-2xl" />
+      </SpinWrapper>
     </motion.div>
   );
 }

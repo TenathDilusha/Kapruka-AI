@@ -25,6 +25,9 @@ async def run_agent_graph(req: AgentRequest) -> AgentResponse:
 
     memory.record_turn("user", req.message)
 
+    if req.language_hint:
+        memory.facts["language"] = req.language_hint
+
     history = [{"role": m.role, "content": m.content} for m in memory.messages]
 
     initial = {
@@ -72,10 +75,30 @@ async def run_agent_graph(req: AgentRequest) -> AgentResponse:
     )
 
     if needs_checkout and req.cart_item_count > 0:
-        conversation.message += (
-            "\n\nTo complete checkout, share recipient name & phone, delivery address & city, "
-            "delivery date (YYYY-MM-DD), and your name as sender."
-        )
+        lang = intent.language
+        if lang == "si":
+            conversation.message += (
+                "\n\nCheckout එකට: recipient name & phone, address, city, delivery date (YYYY-MM-DD), "
+                "sender name, සහ gift message එක (optional) දෙන්න."
+            )
+        elif lang == "singlish":
+            conversation.message += (
+                "\n\nCheckout ekata: recipient details, delivery address & city, date, sender name, "
+                "and gift message ekak oneda kiyapan."
+            )
+        else:
+            conversation.message += (
+                "\n\nTo checkout: share recipient name & phone, delivery address & city, "
+                "delivery date (YYYY-MM-DD), your name, and an optional gift message."
+            )
+
+    if req.cart_item_count > 1:
+        if intent.language == "si":
+            conversation.message += f"\n\n🛒 Cart එකේ දැන් items {req.cart_item_count} — තව gifts add කරන්න හෝ checkout කරන්න."
+        elif intent.language == "singlish":
+            conversation.message += f"\n\n🛒 Cart eke items {req.cart_item_count} — tava gifts add karanna puluwan, checkout ekata yanna!"
+        else:
+            conversation.message += f"\n\n🛒 Your cart has {req.cart_item_count} items — add more gifts or proceed to checkout."
 
     return AgentResponse(
         intent=intent,
