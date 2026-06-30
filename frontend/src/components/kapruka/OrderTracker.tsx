@@ -3,7 +3,7 @@ import { Package, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { fetchMcpHealth, trackKaprukaOrder, type TrackOrderResult } from "@/lib/kapruka";
+import { trackKaprukaOrder, type TrackOrderResult } from "@/lib/kapruka";
 import { sanitizeText } from "@/lib/utils";
 
 interface OrderTrackerModalProps {
@@ -144,22 +144,3 @@ export function OrderTrackerModal({ open, onClose }: OrderTrackerModalProps) {
   );
 }
 
-export function McpStatusBadge() {
-  const [live, setLive] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    fetchMcpHealth()
-      .then((h) => setLive(h.mcp?.status === "ok"))
-      .catch(() => setLive(false));
-  }, []);
-
-  return (
-    <span className="inline-flex items-center gap-1.5 text-[11px] text-white/50">
-      <span
-        className={`h-1.5 w-1.5 rounded-full ${live === null ? "bg-white/40" : live ? "bg-emerald-400" : "bg-red-400"}`}
-      />
-      Kapruka MCP {live === null ? "…" : live ? "Live" : "Offline"}
-      <span className="text-white/30">· 60 req/min · guest checkout</span>
-    </span>
-  );
-}
