@@ -203,7 +203,7 @@ export function GiftOptionsStrip({
         <p className="text-center text-xs font-semibold uppercase tracking-wider text-brand-gold/90">
           Kapruka bestsellers
         </p>
-        <KaprukaLogoSpinner size={40} />
+        <KaprukaLogoSpinner size={40} onPurple />
       </div>
     );
   }

@@ -1,5 +1,4 @@
 import { motion, type Transition } from "framer-motion";
-import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -123,32 +122,48 @@ function KaprukaCartFace({
   return face;
 }
 
-function SpinWrapper({ children, active }: { children: ReactNode; active: boolean }) {
-  if (!active) return <>{children}</>;
-  return (
-    <motion.div animate={{ rotate: 360 }} transition={spinTransition}>
-      {children}
-    </motion.div>
-  );
-}
-
-/** Spinning Kapruka cart logo — use for loading states. */
+/** Yellow semi-circle arc spinner — matches the Kapruka smile curve. */
 export function KaprukaLogoSpinner({
   size = 44,
   className,
+  onPurple = false,
 }: {
   size?: number;
   className?: string;
+  /** Show Kapruka purple behind the arc (hero / dark surfaces). */
+  onPurple?: boolean;
 }) {
+  const stroke = Math.max(3, Math.round(size * 0.13));
+  const radius = (size - stroke) / 2 - 1;
+  const center = size / 2;
+  const arcLength = Math.PI * radius;
+
   return (
     <motion.div
-      className={cn("relative shrink-0", className)}
+      className={cn(
+        "relative flex shrink-0 items-center justify-center rounded-full",
+        onPurple && "bg-kapruka",
+        className,
+      )}
       style={{ width: size, height: size }}
       animate={{ rotate: 360 }}
       transition={spinTransition}
       aria-hidden
+      role="status"
     >
-      <KaprukaCartFace compact blend className="h-full w-full" />
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="block">
+        <circle
+          cx={center}
+          cy={center}
+          r={radius}
+          fill="none"
+          stroke="#fed639"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={`${arcLength} ${arcLength * 2}`}
+          transform={`rotate(135 ${center} ${center})`}
+        />
+      </svg>
     </motion.div>
   );
 }
@@ -174,15 +189,17 @@ export function TharuAvatar({
         className={cn("relative flex h-full w-full items-center justify-center", className)}
         style={{ backgroundColor: KAPRUKA_BG }}
       >
-        <SpinWrapper active={isLoading}>
+        {isLoading ? (
+          <KaprukaLogoSpinner size={80} onPurple />
+        ) : (
           <KaprukaCartFace
             state={state}
             blend
-            animate={!isLoading}
+            animate
             floatDelay
             className="max-h-[min(52vh,20rem)] max-w-[min(72vw,20rem)]"
           />
-        </SpinWrapper>
+        )}
       </motion.div>
     );
   }
@@ -198,9 +215,11 @@ export function TharuAvatar({
       whileHover={interactive && !isLoading ? { scale: 1.04 } : undefined}
       whileTap={interactive && !isLoading ? { scale: 0.96 } : undefined}
     >
-      <SpinWrapper active={isLoading}>
+      {isLoading ? (
+        <KaprukaLogoSpinner size={size * 0.55} onPurple />
+      ) : (
         <KaprukaCartFace state={state} compact className="h-full w-full rounded-2xl" />
-      </SpinWrapper>
+      )}
     </motion.div>
   );
 }
