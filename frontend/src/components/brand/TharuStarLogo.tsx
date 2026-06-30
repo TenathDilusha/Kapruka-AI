@@ -1,0 +1,27 @@
+import { cn } from "@/lib/utils";
+
+export function TharuStarLogo({
+  size = 32,
+  className,
+}: {
+  size?: number;
+  className?: string;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 32 32"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={cn("shrink-0", className)}
+      aria-hidden
+    >
+      <rect width="32" height="32" rx="7" fill="#3f2870" />
+      <path
+        fill="#fed639"
+        d="M16 5.5 18.6 13h7.9l-6.4 4.6 2.4 7.4L16 20.4l-6.5 4.6 2.4-7.4L5.5 13h7.9L16 5.5z"
+      />
+    </svg>
+  );
+}

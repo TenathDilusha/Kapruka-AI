@@ -172,6 +172,7 @@ async def compose_reply_llm(
     facts: dict[str, Any],
     product_count: int,
     bundle_count: int,
+    bundle_product_count: int = 0,
     language: str,
 ) -> tuple[str, list[str], str]:
     llm = get_llm()
@@ -179,7 +180,9 @@ async def compose_reply_llm(
         intent = IntentResult(language=language)  # type: ignore[arg-type]
         gifts = run_gift_designer(intent)
         strategy = run_product_strategy(message, intent, gifts)
-        conv = run_conversation_agent(message, intent, gifts, strategy, product_count)
+        conv = run_conversation_agent(
+            message, intent, gifts, strategy, product_count, bundle_product_count
+        )
         return conv.message, conv.follow_up_questions, conv.language
 
     structured = llm.with_structured_output(LLMConversationOutput)
@@ -188,11 +191,13 @@ Write in the user's language ({language}): English, Sinhala script (සිංහ
 Use natural Sri Lankan Tanglish when language is singlish — e.g. "machan", "hari", "mokakda", "ekak".
 When language is si, reply primarily in Sinhala (can mix common English gift terms).
 Facts: {_facts_text(facts)}
-Products found: {product_count}, bundles: {bundle_count}
+Products found: {product_count}, bundles: {bundle_count}, bundle product cards: {bundle_product_count}
+When bundle product cards exist, keep the message brief (1-2 sentences) — detailed product cards appear below.
 Cart items in session: check if user is building multi-item cart — encourage adding complementary gifts.
 User said: {message}
 Be concise, warm, and guide toward cart, gift message, or checkout.
-Always include 2-3 short follow_up_questions (max 8 words each) the user might tap as their next message."""
+Always include 2-3 short follow_up_questions (max 8 words each) the user might tap to continue the conversation.
+When products are shown, suggest: gift message, cheaper options, delivery date, recipient details — NOT generic "search products"."""
 
     try:
         out = await structured.ainvoke([HumanMessage(content=prompt)])
@@ -204,5 +209,7 @@ Always include 2-3 short follow_up_questions (max 8 words each) the user might t
     intent = IntentResult(language=language)  # type: ignore[arg-type]
     gifts = run_gift_designer(intent)
     strategy = run_product_strategy(message, intent, gifts)
-    conv = run_conversation_agent(message, intent, gifts, strategy, product_count)
+    conv = run_conversation_agent(
+        message, intent, gifts, strategy, product_count, bundle_product_count
+    )
     return conv.message, conv.follow_up_questions, conv.language

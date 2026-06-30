@@ -13,6 +13,7 @@ from app.mcp.client import get_mcp_client
 from app.models.schemas import (
     ConversationResult,
     EnrichedBundle,
+    EnrichedBundleItem,
     GiftDesignerResult,
     IntentResult,
     KaprukaProduct,
@@ -108,6 +109,9 @@ async def gift_designer_node(state: GraphState) -> GraphState:
     return {"intent": intent, "gifts": gifts, "agent_trace": ["gift_designer"]}
 
 
+OPTIONS_PER_BUNDLE_ITEM = 4
+
+
 async def commerce_node(state: GraphState) -> GraphState:
     intent = state.get("intent")
     if intent is None:
@@ -131,16 +135,56 @@ async def commerce_node(state: GraphState) -> GraphState:
             raw_products.append(_to_product(raw))
 
     for bundle in gifts.bundles[:2]:
+        enriched_items: list[EnrichedBundleItem] = []
         bundle_products: list[KaprukaProduct] = []
         for item in bundle.items[:4]:
+            seen_ids: set[str] = set()
+            picks: list[KaprukaProduct] = []
             for raw in mcp.search_products(
                 item.search_query,
                 category=item.category,
                 max_price=intent.budget_max,
-                limit=5,
+                limit=12,
             ):
-                bundle_products.append(_to_product(raw))
-        enriched.append(EnrichedBundle(**bundle.model_dump(), products=_dedupe(bundle_products)[:8]))
+                product = _to_product(raw)
+                if not product.id or product.id in seen_ids:
+                    continue
+                if not product.image_url and not product.in_stock:
+                    continue
+                seen_ids.add(product.id)
+                picks.append(product)
+                if len(picks) >= OPTIONS_PER_BUNDLE_ITEM:
+                    break
+            if len(picks) < OPTIONS_PER_BUNDLE_ITEM:
+                for raw in mcp.search_products(
+                    item.label,
+                    category=item.category,
+                    max_price=intent.budget_max,
+                    limit=12,
+                ):
+                    product = _to_product(raw)
+                    if not product.id or product.id in seen_ids:
+                        continue
+                    seen_ids.add(product.id)
+                    picks.append(product)
+                    if len(picks) >= OPTIONS_PER_BUNDLE_ITEM:
+                        break
+            first = picks[0] if picks else None
+            enriched_items.append(
+                EnrichedBundleItem(**item.model_dump(), product=first, products=picks)
+            )
+            bundle_products.extend(picks)
+        enriched.append(
+            EnrichedBundle(
+                id=bundle.id,
+                theme=bundle.theme,
+                occasion=bundle.occasion,
+                emotional_description=bundle.emotional_description,
+                items=enriched_items,
+                estimated_budget=bundle.estimated_budget,
+                products=_dedupe(bundle_products)[:8],
+            )
+        )
 
     memory = get_memory(state["session_id"])
     products = _dedupe(raw_products)[:16]
@@ -166,12 +210,19 @@ async def conversation_node(state: GraphState) -> GraphState:
     gifts = state.get("gifts") or run_gift_designer(intent)
     products = state.get("products") or []
     bundles = state.get("bundles") or []
+    bundle_product_count = sum(
+        len(getattr(i, "products", None) or [])
+        or (1 if getattr(i, "product", None) else 0)
+        for b in bundles
+        for i in getattr(b, "items", [])
+    ) or sum(len(getattr(b, "products", None) or []) for b in bundles)
 
     msg, follow_ups, lang = await compose_reply_llm(
         message=state["user_message"],
         facts=state.get("facts") or {},
         product_count=len(products),
         bundle_count=len(bundles) or len(gifts.bundles),
+        bundle_product_count=bundle_product_count,
         language=intent.language,
     )
     conversation = ConversationResult(message=msg, language=lang, follow_up_questions=follow_ups)  # type: ignore[arg-type]
@@ -184,10 +235,26 @@ async def conversation_node(state: GraphState) -> GraphState:
 def pick_next(state: GraphState) -> str:
     nxt = state.get("next_agent", "finish")
     trace = state.get("agent_trace") or []
+    gifts = state.get("gifts") or GiftDesignerResult()
+    bundles = state.get("bundles") or []
+    products = state.get("products") or []
+    bundle_has_products = any(
+        (getattr(b, "products", None) and len(b.products) > 0)
+        or any(getattr(i, "products", None) or getattr(i, "product", None) for i in getattr(b, "items", []))
+        for b in bundles
+    )
     if state.get("done"):
         return END
     if nxt == "finish":
         return END
+    if (
+        gifts.bundles
+        and "commerce" not in trace
+        and not bundle_has_products
+        and not products
+        and nxt in ("conversation", "finish")
+    ):
+        return "commerce"
     if nxt in trace:
         return "conversation" if "conversation" not in trace else END
     return nxt

@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 
-import type { CartItem, ChatMessage, GiftBundle, Product } from "../types/index.js";
+import type { BundleItem, CartItem, ChatMessage, GiftBundle, Product } from "../types/index.js";
 import { callPythonAgent } from "./python-agent.js";
 import { addToCart, getCart, getCartStats, getGiftMessageDraft, getOrCreateSession, removeFromCart, setGiftMessageDraft, truncateSessionMessages, updateCartQuantity } from "./session-store.js";
 import { cartAddMessage, extractGiftMessage, resolveLanguage } from "./localization.js";
@@ -28,12 +28,38 @@ function mapProducts(raw: Array<{
   }));
 }
 
+const OPTIONS_PER_BUNDLE_ITEM = 4;
+
 type AgentResultBundles = Array<{
   id: string;
   theme: string;
   occasion: string;
   emotional_description: string;
-  items: Array<{ label: string; search_query: string; category?: string }>;
+  items: Array<{
+    label: string;
+    search_query: string;
+    category?: string;
+    product?: {
+      id: string;
+      name: string;
+      summary?: string;
+      price: { amount: number | null; currency: string };
+      image_url?: string | null;
+      url?: string;
+      in_stock: boolean;
+      category?: { name: string };
+    } | null;
+    products?: Array<{
+      id: string;
+      name: string;
+      summary?: string;
+      price: { amount: number | null; currency: string };
+      image_url?: string | null;
+      url?: string;
+      in_stock: boolean;
+      category?: { name: string };
+    }>;
+  }>;
   estimated_budget?: string;
   products?: Array<{
     id: string;
@@ -50,28 +76,44 @@ function formatCartTotal(total: number, currency: string): string {
   return `${currency} ${total.toLocaleString()}`;
 }
 
+function countBundleProducts(bundles: GiftBundle[]): number {
+  return bundles.reduce((total, bundle) => {
+    const fromItems = bundle.items.reduce(
+      (n, item) => n + (item.products?.length ?? (item.product?.id ? 1 : 0)),
+      0,
+    );
+    if (fromItems > 0) return total + fromItems;
+    return total + (bundle.products?.length ?? 0);
+  }, 0);
+}
+
 function defaultFollowUps(
   agent: Awaited<ReturnType<typeof callPythonAgent>>,
   productCount: number,
-  bundleCount: number,
+  bundles: GiftBundle[],
 ): string[] {
   const fromAgent = (agent.conversation.follow_up_questions ?? []).map((q) => q.trim()).filter(Boolean);
-  if (fromAgent.length >= 2) return fromAgent.slice(0, 3);
+  const bundleProductCount = countBundleProducts(bundles);
+  const totalProducts = Math.max(productCount, bundleProductCount);
+  const filteredAgent = fromAgent.filter(
+    (q) => !/search kapruka products/i.test(q),
+  );
+  if (filteredAgent.length >= 2) return filteredAgent.slice(0, 3);
 
   const lang = agent.intent?.language ?? "en";
   const extras: string[] = [];
 
-  if (productCount > 0) {
+  if (totalProducts > 0) {
     extras.push(
       lang === "si" ? "වඩා අඩු මිලේ options" : lang === "singlish" ? "Cheaper options pennanna" : "Show cheaper options",
-      lang === "si" ? "Cart එකට add කරන්න" : lang === "singlish" ? "Cart ekata add karanna" : "Add one to my cart",
-      lang === "si" ? "වෙනත් gift ideas" : lang === "singlish" ? "Wena gift ideas" : "Show different gift ideas",
+      lang === "si" ? "Gift message එකක් suggest කරන්න" : lang === "singlish" ? "Gift message ekak suggest karanna" : "Suggest a gift message",
+      lang === "si" ? "හෙට deliver කරන්න පුළුවන්ද?" : lang === "singlish" ? "Heta deliver karanna puluwanda?" : "Can you deliver tomorrow?",
     );
-  } else if (bundleCount > 0) {
+  } else if (bundles.length > 0) {
     extras.push(
       lang === "si" ? "Budget එක කීයද?" : lang === "singlish" ? "Budget eka mokakda?" : "What's my budget?",
       lang === "si" ? "Gift එක කාටද?" : lang === "singlish" ? "Gift eka kattiyata da?" : "Who is the gift for?",
-      lang === "si" ? "Kapruka products පෙන්වන්න" : lang === "singlish" ? "Kapruka products show karanna" : "Search Kapruka products",
+      lang === "si" ? "ගැලපෙන Kapruka products පෙන්වන්න" : lang === "singlish" ? "Matching Kapruka products pennanna" : "Find matching Kapruka products",
     );
   } else {
     extras.push(
@@ -81,19 +123,125 @@ function defaultFollowUps(
     );
   }
 
-  return [...fromAgent, ...extras].filter((q, i, arr) => arr.indexOf(q) === i).slice(0, 3);
+  return [...filteredAgent, ...extras].filter((q, i, arr) => arr.indexOf(q) === i).slice(0, 3);
 }
 
 function mapBundles(bundles: AgentResultBundles): GiftBundle[] {
-  return bundles.map((b) => ({
-    id: b.id,
-    theme: b.theme,
-    occasion: b.occasion,
-    emotional_description: b.emotional_description,
-    items: b.items,
-    estimated_budget: b.estimated_budget,
-    products: b.products ? mapProducts(b.products) : undefined,
-  }));
+  return bundles.map((b) => {
+    const items = b.items.map((item) => {
+      const products = item.products?.length
+        ? mapProducts(item.products)
+        : item.product
+          ? [mapProducts([item.product])[0]]
+          : [];
+      return {
+        label: item.label,
+        search_query: item.search_query,
+        category: item.category ?? null,
+        product: products[0],
+        products: products.length ? products : undefined,
+      };
+    });
+    const itemProducts = items.flatMap((item) => item.products ?? []);
+    const seen = new Set<string>();
+    const dedupedItemProducts = itemProducts.filter((p) => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
+    const mappedProducts = b.products ? mapProducts(b.products) : undefined;
+    return {
+      id: b.id,
+      theme: b.theme,
+      occasion: b.occasion,
+      emotional_description: b.emotional_description,
+      items,
+      estimated_budget: b.estimated_budget,
+      products: mappedProducts?.length ? mappedProducts : dedupedItemProducts.length ? dedupedItemProducts : undefined,
+    };
+  });
+}
+
+async function searchItemProducts(
+  item: BundleItem,
+  budgetMax?: number | null,
+): Promise<Product[]> {
+  const { searchProducts } = await import("./kapruka-mcp.js");
+  const attempts: Array<Parameters<typeof searchProducts>[0]> = [
+    { q: item.search_query, category: item.category ?? undefined, max_price: budgetMax ?? undefined, limit: 12 },
+    { q: item.label, category: item.category ?? undefined, max_price: budgetMax ?? undefined, limit: 12 },
+    { q: item.search_query, max_price: budgetMax ?? undefined, limit: 12 },
+  ];
+
+  const seen = new Set<string>();
+  const products: Product[] = [];
+
+  for (const params of attempts) {
+    const { results } = await searchProducts({ ...params, in_stock_only: true });
+    for (const raw of results) {
+      if (!raw.id || seen.has(raw.id)) continue;
+      if (!raw.image_url && !raw.in_stock) continue;
+      seen.add(raw.id);
+      products.push(mapProducts([raw])[0]);
+      if (products.length >= OPTIONS_PER_BUNDLE_ITEM) return products;
+    }
+  }
+
+  return products;
+}
+
+async function enrichBundlesWithProducts(
+  bundles: GiftBundle[],
+  budgetMax?: number | null,
+): Promise<GiftBundle[]> {
+  const enriched = await Promise.all(
+    bundles.map(async (bundle) => {
+      const items = await Promise.all(
+        bundle.items.map(async (item) => {
+          const existing = item.products?.length
+            ? item.products
+            : item.product?.id
+              ? [item.product]
+              : [];
+          if (existing.length >= OPTIONS_PER_BUNDLE_ITEM) {
+            return { ...item, products: existing.slice(0, OPTIONS_PER_BUNDLE_ITEM), product: existing[0] };
+          }
+
+          const found = await searchItemProducts(item, budgetMax);
+          const merged = [...existing];
+          const seen = new Set(merged.map((p) => p.id));
+          for (const product of found) {
+            if (seen.has(product.id)) continue;
+            seen.add(product.id);
+            merged.push(product);
+            if (merged.length >= OPTIONS_PER_BUNDLE_ITEM) break;
+          }
+
+          return {
+            ...item,
+            products: merged.length ? merged : undefined,
+            product: merged[0],
+          };
+        }),
+      );
+
+      const seen = new Set<string>();
+      const products = items
+        .flatMap((item) => item.products ?? (item.product ? [item.product] : []))
+        .filter((product) => {
+          if (seen.has(product.id)) return false;
+          seen.add(product.id);
+          return true;
+        });
+
+      return {
+        ...bundle,
+        items,
+        products: products.length ? products : bundle.products,
+      };
+    }),
+  );
+  return enriched;
 }
 
 export interface OrchestratorResult {
@@ -230,8 +378,12 @@ export async function handleChatMessage(
   }
 
   const products = mapProducts(agent.products ?? []);
-  const bundles = mapBundles(agent.bundles?.length ? agent.bundles : agent.gift_bundles.bundles);
-  const followUpQuestions = defaultFollowUps(agent, products.length, bundles.length);
+  let bundles = mapBundles(agent.bundles?.length ? agent.bundles : agent.gift_bundles.bundles);
+  if (bundles.length > 0) {
+    bundles = await enrichBundlesWithProducts(bundles, agent.intent?.budget_max);
+    statusUpdates.push("Searching Kapruka catalog...");
+  }
+  const followUpQuestions = defaultFollowUps(agent, products.length, bundles);
 
   const assistantMsg: ChatMessage = {
     id: uuidv4(),

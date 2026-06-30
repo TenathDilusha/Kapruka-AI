@@ -1,188 +1,59 @@
-import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { motion } from "framer-motion";
 
-import { cn, formatPrice, sanitizeText } from "@/lib/utils";
+import { KaprukaImage } from "@/components/kapruka/KaprukaImage";
 import { KaprukaLogoSpinner } from "@/components/mascot/TharuAvatar";
+import { cn, formatPrice, sanitizeText } from "@/lib/utils";
 import type { GiftOption } from "@/types";
 
 interface GiftOptionCardProps {
   option: GiftOption;
   onSelect: (prompt: string) => void;
   className?: string;
-  layout?: "grid" | "spotlight";
+  layout?: "grid" | "scroll";
 }
 
 export function GiftOptionCard({ option, onSelect, className, layout = "grid" }: GiftOptionCardProps) {
-  const productName = sanitizeText(option.sample_product ?? option.short);
+  const productName = sanitizeText(option.sample_product ?? "");
   const typeLabel = sanitizeText(option.label);
-
-  if (layout === "spotlight") {
-    return (
-      <motion.button
-        type="button"
-        initial={{ opacity: 0, x: 24 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -24 }}
-        transition={{ duration: 0.35, ease: "easeOut" }}
-        onClick={() => onSelect(option.prompt)}
-        className={cn(
-          "group flex w-full items-stretch overflow-hidden rounded-xl border border-border bg-surface text-left transition hover:border-brand-gold/30",
-          className,
-        )}
-      >
-        <div className="relative aspect-[4/3] w-[38%] min-w-[7rem] max-w-[9.5rem] shrink-0 overflow-hidden bg-kapruka-dark sm:w-[34%]">
-          {option.image_url ? (
-            <img
-              src={option.image_url}
-              alt={productName}
-              className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-              loading="lazy"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-brand-purple/25">
-              <Sparkles className="h-7 w-7" />
-            </div>
-          )}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#1e1033]/40 to-transparent" />
-        </div>
-
-        <div className="flex min-w-0 flex-1 flex-col justify-center px-3 py-2.5 sm:px-4 sm:py-3">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
-            {typeLabel}
-          </span>
-          <p className="mt-0.5 line-clamp-2 text-sm font-bold leading-snug text-white sm:text-base">
-            {productName}
-          </p>
-          {option.price?.amount != null && (
-            <p className="mt-1.5 text-xs font-bold text-brand-gold sm:text-sm">
-              {formatPrice(option.price.amount, option.price.currency)}
-            </p>
-          )}
-          <span className="mt-2 text-[10px] font-medium text-text-muted group-hover:text-brand-gold">
-            Tap to explore →
-          </span>
-        </div>
-      </motion.button>
-    );
-  }
+  const hasProductName = Boolean(productName) && productName.toLowerCase() !== typeLabel.toLowerCase();
+  const displayTitle = hasProductName ? productName : typeLabel;
+  const imageSrc = option.image_url;
 
   return (
     <motion.button
       type="button"
-      whileHover={{ y: -3 }}
+      whileHover={{ y: layout === "scroll" ? -2 : -3 }}
       whileTap={{ scale: 0.98 }}
       onClick={() => onSelect(option.prompt)}
       className={cn(
-        "group relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface text-left transition hover:border-brand-gold/30",
+        "group flex shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface text-left transition hover:border-brand-gold/30",
+        layout === "scroll" ? "w-[8.75rem] sm:w-[9.5rem]" : "w-full min-w-0",
         className,
       )}
     >
-      <div className="relative aspect-[5/4] overflow-hidden bg-kapruka-dark">
-        {option.image_url ? (
-          <img
-            src={option.image_url}
-            alt={productName}
-            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-brand-purple/25">
-            <Sparkles className="h-6 w-6" />
-          </div>
-        )}
-
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#1e1033]/60 via-transparent to-transparent" />
-
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-kapruka-dark">
+        <KaprukaImage
+          src={imageSrc}
+          alt={displayTitle}
+          className="absolute inset-0 h-full w-full transition duration-500 group-hover:scale-105"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+        <span className="absolute left-1.5 bottom-1.5 rounded-full bg-kapruka/90 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white backdrop-blur">
+          {typeLabel}
+        </span>
         {option.price?.amount != null && (
-          <span className="absolute right-1.5 top-1.5 rounded-full bg-white/95 px-1.5 py-0.5 text-[9px] font-bold text-brand-purple shadow-sm backdrop-blur">
+          <span className="absolute right-1.5 top-1.5 rounded-full bg-brand-gold px-1.5 py-0.5 text-[9px] font-bold text-black shadow-sm">
             {formatPrice(option.price.amount, option.price.currency)}
           </span>
         )}
       </div>
 
-      <div className="relative border-t border-border bg-surface px-2 py-2">
-        <p className="line-clamp-1 text-[10px] font-bold leading-tight text-white">{productName}</p>
-        <p className="mt-0.5 text-[9px] font-medium text-text-muted">{typeLabel}</p>
+      <div className="border-t border-border bg-surface px-2 py-1.5">
+        <p className="line-clamp-2 min-h-[2rem] text-[10px] font-semibold leading-snug text-white">
+          {displayTitle}
+        </p>
       </div>
     </motion.button>
-  );
-}
-
-function SpotlightCarousel({
-  options,
-  onSelect,
-}: {
-  options: GiftOption[];
-  onSelect: (prompt: string) => void;
-}) {
-  const [index, setIndex] = useState(0);
-  const count = options.length;
-
-  const go = useCallback(
-    (delta: number) => {
-      setIndex((i) => (i + delta + count) % count);
-    },
-    [count],
-  );
-
-  useEffect(() => {
-    if (count <= 1) return;
-    const timer = setInterval(() => go(1), 4500);
-    return () => clearInterval(timer);
-  }, [count, go]);
-
-  const active = options[index];
-
-  return (
-    <div className="relative px-1">
-      <div className="overflow-hidden rounded-2xl">
-        <AnimatePresence mode="wait">
-          <GiftOptionCard
-            key={active.id}
-            option={active}
-            onSelect={onSelect}
-            layout="spotlight"
-          />
-        </AnimatePresence>
-      </div>
-
-      {count > 1 && (
-        <>
-          <button
-            type="button"
-            aria-label="Previous bestseller"
-            onClick={() => go(-1)}
-            className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/40 bg-black/25 p-1 text-white shadow-md backdrop-blur transition hover:bg-black/40"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            aria-label="Next bestseller"
-            onClick={() => go(1)}
-            className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/40 bg-black/25 p-1 text-white shadow-md backdrop-blur transition hover:bg-black/40"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-
-          <div className="mt-2.5 flex items-center justify-center gap-1.5">
-            {options.map((opt, i) => (
-              <button
-                key={opt.id}
-                type="button"
-                aria-label={`Show ${sanitizeText(opt.label)} bestseller`}
-                onClick={() => setIndex(i)}
-                className={cn(
-                  "h-1.5 rounded-full transition-all",
-                  i === index ? "w-5 bg-brand-gold" : "w-1.5 bg-white/20 hover:bg-white/40",
-                )}
-              />
-            ))}
-          </div>
-        </>
-      )}
-    </div>
   );
 }
 
@@ -210,7 +81,8 @@ export function GiftOptionsStrip({
 
   if (options.length === 0) return null;
 
-  const gridItems = options.slice(0, 4);
+  const withImages = options.filter((o) => o.image_url);
+  const displayOptions = (withImages.length >= 4 ? withImages : options).slice(0, 6);
 
   return (
     <div className="space-y-2.5">
@@ -218,15 +90,9 @@ export function GiftOptionsStrip({
         Kapruka bestsellers
       </p>
 
-      {/* Mobile: rotating spotlight — no horizontal scroll */}
-      <div className="sm:hidden">
-        <SpotlightCarousel options={options} onSelect={onSelect} />
-      </div>
-
-      {/* Desktop: compact 4-up grid — everything visible, no scroll */}
-      <div className="hidden grid-cols-4 gap-2 sm:grid">
-        {gridItems.map((option) => (
-          <GiftOptionCard key={option.id} option={option} onSelect={onSelect} layout="grid" />
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-thin sm:mx-0 sm:grid sm:grid-cols-4 sm:gap-2 sm:overflow-visible sm:px-0 sm:pb-0">
+        {displayOptions.slice(0, 4).map((option) => (
+          <GiftOptionCard key={option.id} option={option} onSelect={onSelect} layout="scroll" className="sm:w-full" />
         ))}
       </div>
 

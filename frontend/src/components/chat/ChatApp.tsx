@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import { ChatBubble, TypingIndicator } from "@/components/chat/ChatBubble";
 import { GiftOptionsStrip } from "@/components/chat/GiftOptionCard";
 import { WelcomeSamplePrompts } from "@/components/chat/WelcomeSamplePrompts";
+import { TharuStarLogo } from "@/components/brand/TharuStarLogo";
 import { CartPanel, CheckoutForm, type CheckoutDetails } from "@/components/cart/CartPanel";
 import { OrderTrackerModal } from "@/components/kapruka/OrderTracker";
 import { TharuAvatar } from "@/components/mascot";
@@ -337,9 +338,7 @@ export function ChatApp() {
       >
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
           <div className="flex min-w-0 items-center gap-2.5">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-kapruka text-sm font-bold text-brand-gold">
-              T
-            </span>
+            <TharuStarLogo size={32} className="rounded-lg" />
             <div className="min-w-0 leading-tight">
               <h1 className="flex items-center gap-2 text-base font-semibold tracking-tight text-white">
                 Tharu
@@ -468,6 +467,7 @@ export function ChatApp() {
                       msg.id === lastAssistantId && !loading ? msg.followUpQuestions : undefined
                     }
                     onFollowUpSelect={handleSend}
+                    onFindBundleItem={handleSend}
                   />
                 </motion.div>
               ))}

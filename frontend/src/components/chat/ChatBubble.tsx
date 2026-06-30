@@ -21,6 +21,7 @@ interface ChatBubbleProps {
   onEditCancel?: () => void;
   followUps?: string[];
   onFollowUpSelect?: (prompt: string) => void;
+  onFindBundleItem?: (query: string) => void;
 }
 
 function dedupeProducts(products: Product[]): Product[] {
@@ -45,16 +46,29 @@ export function ChatBubble({
   onEditCancel,
   followUps,
   onFollowUpSelect,
+  onFindBundleItem,
 }: ChatBubbleProps) {
   const isUser = message.role === "user";
 
   const allProducts = useMemo(() => {
-    const fromBundles = message.bundles?.flatMap((b) => b.products ?? []) ?? [];
+    const fromBundles =
+      message.bundles?.flatMap((b) => [
+        ...(b.products ?? []),
+        ...b.items.flatMap((item) => item.products ?? (item.product ? [item.product] : [])),
+      ]) ?? [];
     return dedupeProducts([...(message.products ?? []), ...fromBundles]);
   }, [message.bundles, message.products]);
 
   const bundleProductIds = useMemo(
-    () => new Set(message.bundles?.flatMap((b) => (b.products ?? []).map((p) => p.id)) ?? []),
+    () =>
+      new Set(
+        message.bundles?.flatMap((b) => [
+          ...(b.products ?? []).map((p) => p.id),
+          ...b.items.flatMap((item) =>
+            (item.products ?? (item.product ? [item.product] : [])).map((p) => p.id),
+          ),
+        ]) ?? [],
+      ),
     [message.bundles],
   );
 
@@ -150,7 +164,13 @@ export function ChatBubble({
         {!isUser && message.bundles && message.bundles.length > 0 && (
           <div className="space-y-4">
             {message.bundles.map((b) => (
-              <BundleCard key={b.id} bundle={b} onAdd={onAddProduct} onViewProduct={onViewProduct} />
+              <BundleCard
+                key={b.id}
+                bundle={b}
+                onAdd={onAddProduct}
+                onViewProduct={onViewProduct}
+                onFindItem={onFindBundleItem}
+              />
             ))}
           </div>
         )}

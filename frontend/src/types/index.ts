@@ -16,6 +16,8 @@ export interface BundleItem {
   label: string;
   search_query: string;
   category?: string | null;
+  product?: Product | null;
+  products?: Product[];
 }
 
 export interface GiftBundle {

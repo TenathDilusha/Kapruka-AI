@@ -1,9 +1,14 @@
-const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3001").replace(/\/$/, "");
+const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+
+function apiUrl(path: string): string {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return API_BASE ? `${API_BASE}${normalized}` : normalized;
+}
 
 import type { ChatMessage, ChatResponse, CartItem, GiftOption } from "../types";
 
 export async function fetchGiftOptions(): Promise<GiftOption[]> {
-  const res = await fetch(`${API_URL}/api/chat/options`);
+  const res = await fetch(apiUrl("/api/chat/options"));
   if (!res.ok) throw new Error("Failed to load gift options");
   const data = (await res.json()) as { options: GiftOption[] };
   return data.options ?? [];
@@ -13,7 +18,7 @@ export async function sendMessage(
   message: string,
   sessionId?: string,
 ): Promise<ChatResponse> {
-  const res = await fetch(`${API_URL}/api/chat`, {
+  const res = await fetch(apiUrl("/api/chat"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sessionId, message }),
@@ -26,7 +31,7 @@ export async function addToCart(
   sessionId: string,
   product: { productId: string; name: string; price: number; currency: string; image_url?: string },
 ): Promise<ChatResponse> {
-  const res = await fetch(`${API_URL}/api/chat`, {
+  const res = await fetch(apiUrl("/api/chat"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -50,7 +55,7 @@ export async function updateCartItem(
   productId: string,
   quantity: number,
 ): Promise<ChatResponse> {
-  const res = await fetch(`${API_URL}/api/chat`, {
+  const res = await fetch(apiUrl("/api/chat"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -63,7 +68,7 @@ export async function updateCartItem(
 }
 
 export async function removeCartItem(sessionId: string, productId: string): Promise<ChatResponse> {
-  const res = await fetch(`${API_URL}/api/chat`, {
+  const res = await fetch(apiUrl("/api/chat"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -84,7 +89,7 @@ export async function submitCheckout(
     gift_message?: string;
   },
 ): Promise<ChatResponse> {
-  const res = await fetch(`${API_URL}/api/chat/checkout`, {
+  const res = await fetch(apiUrl("/api/chat/checkout"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sessionId, ...details }),
@@ -108,7 +113,7 @@ export function streamMessage(
 ) {
   const controller = new AbortController();
 
-  fetch(`${API_URL}/api/chat/stream`, {
+  fetch(apiUrl("/api/chat/stream"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sessionId, message, languageHint, historyTruncateTo }),

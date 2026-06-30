@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
-import { Check, ExternalLink, ShoppingCart, Sparkles } from "lucide-react";
+import { Check, ExternalLink, ShoppingCart } from "lucide-react";
 import { useState } from "react";
 
+import { KaprukaImage } from "@/components/kapruka/KaprukaImage";
 import { cn, formatPrice, productKaprukaUrl, sanitizeText } from "@/lib/utils";
 import type { Product } from "@/types";
 
@@ -34,18 +35,11 @@ export function ProductCard({ product, onAdd, onViewDetails, compact = false }: 
       )}
     >
       <div className="relative aspect-square overflow-hidden bg-kapruka-dark">
-        {product.image_url ? (
-          <img
-            src={product.image_url}
-            alt={name}
-            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-white/20">
-            <Sparkles className="h-10 w-10" />
-          </div>
-        )}
+        <KaprukaImage
+          src={product.image_url}
+          alt={name}
+          className="transition duration-500 group-hover:scale-105"
+        />
 
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
 

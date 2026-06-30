@@ -10,6 +10,7 @@ def run_conversation_agent(
     gifts: GiftDesignerResult,
     strategy: ProductStrategyResult,
     product_count: int = 0,
+    bundle_product_count: int = 0,
 ) -> ConversationResult:
     lang = intent.language
     occasion = intent.occasion
@@ -34,21 +35,25 @@ def run_conversation_agent(
             follow_up_questions=["Who is this gift for?", "Which city should we deliver to?"],
         )
 
-    if product_count > 0:
+    if product_count > 0 or bundle_product_count > 0:
+        total = product_count + bundle_product_count
         if lang == "si":
-            msg = f"මෙන්න ඔබට ගැලපෙන තෝරාගැනීම් {product_count}ක්! ඕනෑම එකක් cart එකට දාන්න — multi-item order එකක් හදන්න පුළුවන්."
+            msg = f"මෙන්න ඔබට ගැලපෙන තෝරාගැනීම් {total}ක්! ඕනෑම එකක් cart එකට දාන්න — multi-item order එකක් හදන්න පුළුවන්."
         elif lang == "singlish":
-            msg = f"Meka balanna machan — {product_count} options match wela. Cart ekata add karanna, multi-item order ekak hadanna puluwan!"
+            msg = f"Meka balanna machan — {total} Kapruka picks match wela. Cart ekata add karanna puluwan!"
         else:
-            msg = f"I found {product_count} picks for you. Add several to your cart — we'll ship them together in one Kapruka order."
+            msg = (
+                f"I found {total} Kapruka picks for you. "
+                "Tap a card to add to cart or view on site — we can ship them together in one order."
+            )
         return ConversationResult(
             message=msg,
             language=lang,
             tone="excited",
             follow_up_questions=[
-                "Want a gift message on the card?" if lang == "en" else "Gift message ekak oneda?" if lang == "singlish" else "Gift message එකක් ඕනද?",
+                "Suggest a gift message" if lang == "en" else "Gift message ekak" if lang == "singlish" else "Gift message එකක්",
                 "Show cheaper options" if lang == "en" else "Lassana options" if lang == "singlish" else "වඩා අඩු මිලේ options",
-                "Something for delivery tomorrow" if lang == "en" else "Heta deliver karanna puluwanda?" if lang == "singlish" else "හෙට deliver කරන්න පුළුවන්ද?",
+                "Can you deliver tomorrow?" if lang == "en" else "Heta deliver karanna puluwanda?" if lang == "singlish" else "හෙට deliver කරන්න පුළුවන්ද?",
             ],
         )  # type: ignore[arg-type]
 
@@ -75,10 +80,17 @@ def run_conversation_agent(
             )
         follow_ups = []
         if not intent.budget_max:
-            follow_ups.append("What's your budget?" if lang == "en" else "Budget eka mokakda?")
+            follow_ups.append("What's my budget?" if lang == "en" else "Budget eka mokakda?")
         if not intent.recipient:
             follow_ups.append("Who is the gift for?" if lang == "en" else "මේ gift එක කාටද?")
-        return ConversationResult(message=msg, language=lang, tone="warm", follow_up_questions=follow_ups)  # type: ignore[arg-type]
+        follow_ups.append(
+            "Find matching Kapruka products"
+            if lang == "en"
+            else "Kapruka products match karanna"
+            if lang == "singlish"
+            else "ගැලපෙන Kapruka products"
+        )
+        return ConversationResult(message=msg, language=lang, tone="warm", follow_up_questions=follow_ups[:3])  # type: ignore[arg-type]
 
     if lang == "si":
         msg = "ආයුබෝවන්! මම තාරු — ඔබේ gift concierge. මොකක්ද occasion එක, සහ කාටද gift එක?"

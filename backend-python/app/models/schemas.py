@@ -49,6 +49,11 @@ class BundleItem(BaseModel):
     category: str | None = None
 
 
+class EnrichedBundleItem(BundleItem):
+    product: "KaprukaProduct | None" = None
+    products: list["KaprukaProduct"] = Field(default_factory=list)
+
+
 class GiftBundle(BaseModel):
     id: str
     theme: str
@@ -82,6 +87,7 @@ class KaprukaProduct(BaseModel):
 
 
 class EnrichedBundle(GiftBundle):
+    items: list[EnrichedBundleItem] = Field(default_factory=list)
     products: list[KaprukaProduct] = Field(default_factory=list)
 
 
