@@ -82,14 +82,14 @@ function MascotEyes({ compact = false }: { compact?: boolean }) {
 
 function KaprukaCartFace({
   className,
-  state,
+  state = "idle",
   compact = false,
   blend = false,
   animate = false,
   floatDelay = false,
 }: {
   className?: string;
-  state: TharuState;
+  state?: TharuState;
   compact?: boolean;
   blend?: boolean;
   animate?: boolean;
