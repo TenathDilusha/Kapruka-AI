@@ -1,4 +1,5 @@
-const PYTHON_URL = process.env.PYTHON_AGENT_URL ?? "http://127.0.0.1:8000";
+const PYTHON_URL = (process.env.PYTHON_AGENT_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
+const PYTHON_TIMEOUT_MS = Number(process.env.PYTHON_AGENT_TIMEOUT_MS ?? "120000");
 
 export interface AgentPayload {
   message: string;
@@ -68,6 +69,7 @@ export async function callPythonAgent(payload: AgentPayload): Promise<AgentResul
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(PYTHON_TIMEOUT_MS),
   });
 
   if (!res.ok) {

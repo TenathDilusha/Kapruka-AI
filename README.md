@@ -62,15 +62,41 @@ Try: *"Birthday gift for mom under 5000"* or *"Anniversary roses and chocolates"
 
 Health: `GET /health` on both backends.
 
+<<<<<<< HEAD
 ## Deploy on Render
 
 ### Express (`backend-express`)
+=======
+## Production hosting
+
+| Service | URL |
+|---------|-----|
+| Frontend (Vercel) | `https://kapruka-ai-frontend.vercel.app` |
+| Express (Render) | `https://kapruka-ai-1.onrender.com` |
+| Python (Render) | `https://kapruka-ai.onrender.com` |
+
+### Vercel (frontend)
+
+- **Root Directory:** `frontend`
+- **Framework:** Vite
+- **Build Command:** `npm run build`
+- **Output Directory:** `dist`
+
+| Environment variable | Value |
+|---------------------|--------|
+| `VITE_API_URL` | `https://kapruka-ai-1.onrender.com` |
+
+Redeploy after changing `VITE_*` variables (they are baked in at build time).
+
+### Render — Express (`kapruka-ai-1`)
+>>>>>>> 8da9b88 (Pin Python 3.12 for Render deploy)
 
 | Setting | Value |
 |---------|--------|
 | Root Directory | `backend-express` |
 | Build Command | `npm install --include=dev && npm run build` |
 | Start Command | `npm start` |
+<<<<<<< HEAD
 | Health Check | `/health` |
 
 **Environment variables**
@@ -84,14 +110,47 @@ Health: `GET /health` on both backends.
 `PORT` is set automatically by Render. Do **not** use `yarn start` alone — you must run `npm run build` so `dist/index.js` exists.
 
 ### Python (`backend-python`)
+=======
+
+| Environment variable | Value |
+|---------------------|--------|
+| `PYTHON_AGENT_URL` | `https://kapruka-ai.onrender.com` |
+| `FRONTEND_URL` | `https://kapruka-ai-frontend.vercel.app` |
+| `ALLOW_VERCEL_PREVIEWS` | `true` |
+| `PYTHON_AGENT_TIMEOUT_MS` | `120000` |
+| `KAPRUKA_MCP_URL` | `https://mcp.kapruka.com/mcp` |
+
+### Render — Python (`kapruka-ai`)
+>>>>>>> 8da9b88 (Pin Python 3.12 for Render deploy)
 
 | Setting | Value |
 |---------|--------|
 | Root Directory | `backend-python` |
 | Build Command | `pip install -r requirements.txt` |
 | Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+<<<<<<< HEAD
 | Health Check | `/health` |
 
 Set `OPENAI_API_KEY` in Render environment variables.
 
 Or use the repo `render.yaml` blueprint for both services.
+=======
+
+| Environment variable | Value |
+|---------------------|--------|
+| `PYTHON_VERSION` | `3.12.8` |
+| `OPENAI_API_KEY` | your OpenAI key |
+| `OPENAI_MODEL` | `gpt-4o-mini` |
+| `KAPRUKA_MCP_URL` | `https://mcp.kapruka.com/mcp` |
+
+Render defaults to Python 3.14, which breaks `pydantic-core` (Rust build). Pin **3.12.8** via `PYTHON_VERSION` or `backend-python/runtime.txt`.
+
+### Smoke test
+
+```bash
+curl https://kapruka-ai.onrender.com/health
+curl https://kapruka-ai-1.onrender.com/health
+```
+
+Then open the Vercel frontend and send a chat message. First request after idle may take ~30–60s while Render free instances wake up.
+>>>>>>> 8da9b88 (Pin Python 3.12 for Render deploy)

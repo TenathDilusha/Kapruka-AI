@@ -11,9 +11,13 @@ services:
       - key: NODE_VERSION
         value: "20"
       - key: PYTHON_AGENT_URL
-        sync: false
+        value: https://kapruka-ai.onrender.com
       - key: FRONTEND_URL
-        sync: false
+        value: https://kapruka-ai-frontend.vercel.app
+      - key: ALLOW_VERCEL_PREVIEWS
+        value: "true"
+      - key: PYTHON_AGENT_TIMEOUT_MS
+        value: "120000"
       - key: KAPRUKA_MCP_URL
         value: https://mcp.kapruka.com/mcp
 
@@ -25,6 +29,8 @@ services:
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENAI_MODEL
