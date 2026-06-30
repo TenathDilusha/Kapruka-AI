@@ -1,13 +1,14 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ExternalLink, Gift, Package, Send, ShoppingCart, Sparkles, Truck } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 
 import { ChatBubble, TypingIndicator } from "@/components/chat/ChatBubble";
 import { GiftOptionsStrip } from "@/components/chat/GiftOptionCard";
 import { WelcomeSamplePrompts } from "@/components/chat/WelcomeSamplePrompts";
 import { CartPanel, CheckoutForm, type CheckoutDetails } from "@/components/cart/CartPanel";
-import { McpStatusBadge, OrderTrackerModal } from "@/components/kapruka/OrderTracker";
+import { OrderTrackerModal } from "@/components/kapruka/OrderTracker";
 import { TharuAvatar } from "@/components/mascot";
 import type { TharuState } from "@/components/mascot";
 import { ProductDetailModal } from "@/components/products/ProductDetailModal";
@@ -24,6 +25,9 @@ import {
 import { UI, detectLanguage } from "@/lib/i18n";
 import { cn, formatPrice } from "@/lib/utils";
 import type { CartItem, ChatMessage, GiftOption, Product } from "@/types";
+
+const PENDING_QUERY_KEY = "tharu_pending_query";
+const CHAT_STARTED_KEY = "tharu_chat_started";
 
 const INITIAL_WELCOME: ChatMessage = {
   id: "welcome",
@@ -47,7 +51,14 @@ const welcomeReveal = {
 };
 
 export function ChatApp() {
-  const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_WELCOME]);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isWelcome = location.pathname === "/";
+  const queryHandled = useRef(false);
+
+  const [messages, setMessages] = useState<ChatMessage[]>(() =>
+    isWelcome ? [INITIAL_WELCOME] : [],
+  );
   const [giftMessage, setGiftMessage] = useState("");
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState<string>();
@@ -64,8 +75,6 @@ export function ChatApp() {
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<(() => void) | null>(null);
-
-  const isWelcome = messages.length === 1;
 
   useEffect(() => {
     let cancelled = false;
@@ -94,11 +103,8 @@ export function ChatApp() {
 
   const trustLabels = t.trust;
 
-  const handleSend = useCallback(
-    (text: string) => {
-      const trimmed = text.trim();
-      if (!trimmed || loading) return;
-
+  const sendMessage = useCallback(
+    (trimmed: string) => {
       const languageHint = detectLanguage(trimmed);
 
       const userMsg: ChatMessage = {
@@ -131,7 +137,47 @@ export function ChatApp() {
         languageHint,
       );
     },
-    [loading, sessionId],
+    [sessionId],
+  );
+
+  useEffect(() => {
+    if (!isWelcome) return;
+    sessionStorage.removeItem(PENDING_QUERY_KEY);
+    sessionStorage.removeItem(CHAT_STARTED_KEY);
+  }, [isWelcome]);
+
+  useEffect(() => {
+    if (location.pathname !== "/chat" || queryHandled.current) return;
+
+    const pending = sessionStorage.getItem(PENDING_QUERY_KEY)?.trim();
+    if (pending) {
+      queryHandled.current = true;
+      sessionStorage.removeItem(PENDING_QUERY_KEY);
+      sessionStorage.setItem(CHAT_STARTED_KEY, "1");
+      sendMessage(pending);
+      return;
+    }
+
+    if (!sessionStorage.getItem(CHAT_STARTED_KEY)) {
+      navigate("/", { replace: true });
+    }
+  }, [location.pathname, navigate, sendMessage]);
+
+  const handleSend = useCallback(
+    (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed || loading) return;
+
+      if (isWelcome) {
+        sessionStorage.setItem(PENDING_QUERY_KEY, trimmed);
+        navigate("/chat");
+        return;
+      }
+
+      sendMessage(trimmed);
+      sessionStorage.setItem(CHAT_STARTED_KEY, "1");
+    },
+    [isWelcome, loading, navigate, sendMessage],
   );
 
   const handleAddProduct = async (product: Product) => {
@@ -403,9 +449,6 @@ export function ChatApp() {
               <Send className="h-4 w-4" />
             </Button>
           </form>
-          <div className="mt-2 flex justify-center">
-            <McpStatusBadge />
-          </div>
         </div>
       </motion.footer>
 
