@@ -39,6 +39,7 @@ chatRouter.post("/", async (req, res) => {
 
     const result = await handleChatMessage(sessionId, message ?? "", action, {
       languageHint: (req.body as { languageHint?: "en" | "si" | "singlish" }).languageHint,
+      historyTruncateTo: (req.body as { historyTruncateTo?: number }).historyTruncateTo,
     });
     res.json(result);
   } catch (err) {
@@ -89,7 +90,10 @@ chatRouter.post("/stream", async (req, res) => {
     const session = sessionId;
     send("status", { text: "Thinking..." });
 
-    const result = await handleChatMessage(session, message, undefined, { languageHint });
+    const result = await handleChatMessage(session, message, undefined, {
+      languageHint,
+      historyTruncateTo: (req.body as { historyTruncateTo?: number }).historyTruncateTo,
+    });
     for (const update of result.statusUpdates) {
       send("status", { text: update });
     }

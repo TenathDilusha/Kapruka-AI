@@ -15,6 +15,16 @@ const SAMPLE_PROMPTS = [
   },
 ] as const;
 
+/** Pick `count` random sample prompts from the pool (default 3 of 4). */
+export function getSamplePrompts(count = 3): Array<{ label: string; prompt: string }> {
+  const pool = [...SAMPLE_PROMPTS];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, Math.min(count, pool.length));
+}
+
 export const UI: Record<
   UserLanguage,
   {

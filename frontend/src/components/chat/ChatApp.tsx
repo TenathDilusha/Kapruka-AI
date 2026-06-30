@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ExternalLink, Gift, Package, Send, ShoppingCart, Sparkles, Truck } from "lucide-react";
+import { ExternalLink, Gift, Package, Send, ShoppingCart, Sparkles, Square, Truck } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
@@ -22,7 +22,7 @@ import {
   submitCheckout,
   updateCartItem,
 } from "@/lib/api";
-import { UI, detectLanguage } from "@/lib/i18n";
+import { UI, detectLanguage, getSamplePrompts } from "@/lib/i18n";
 import { cn, formatPrice } from "@/lib/utils";
 import type { CartItem, ChatMessage, GiftOption, Product } from "@/types";
 
@@ -40,6 +40,12 @@ const INITIAL_WELCOME: ChatMessage = {
 const t = UI.en;
 
 const TRUST_ICONS = [ShoppingCart, Truck, Sparkles] as const;
+
+const headerPillClass =
+  "relative inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs font-semibold text-white/90 transition hover:border-brand-gold/50 hover:bg-white/20 sm:px-3";
+
+const headerKaprukaClass =
+  "inline-flex shrink-0 items-center gap-1.5 rounded-full border border-brand-gold/50 bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-purple shadow-sm transition hover:border-brand-gold hover:bg-brand-gold hover:text-text-primary sm:px-3";
 
 const welcomeReveal = {
   hidden: { opacity: 0, y: 14 },
@@ -73,8 +79,13 @@ export function ChatApp() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<(() => void) | null>(null);
+  const generationRef = useRef(0);
+
+  const samplePrompts = useMemo(() => getSamplePrompts(3), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,18 +114,11 @@ export function ChatApp() {
 
   const trustLabels = t.trust;
 
-  const sendMessage = useCallback(
-    (trimmed: string) => {
+  const startStream = useCallback(
+    (trimmed: string, options?: { historyTruncateTo?: number }) => {
+      const generation = ++generationRef.current;
       const languageHint = detectLanguage(trimmed);
 
-      const userMsg: ChatMessage = {
-        id: uuidv4(),
-        role: "user",
-        content: trimmed,
-        timestamp: Date.now(),
-      };
-      setMessages((m) => [...m, userMsg]);
-      setInput("");
       setLoading(true);
       setStatusText("Thinking...");
 
@@ -122,23 +126,47 @@ export function ChatApp() {
       abortRef.current = streamMessage(
         trimmed,
         sessionId,
-        (status) => setStatusText(status),
+        (status) => {
+          if (generation !== generationRef.current) return;
+          setStatusText(status);
+        },
         (data) => {
+          if (generation !== generationRef.current) return;
           setSessionId(data.sessionId);
           setCart(data.cart);
           setMessages((m) => [...m, data.message]);
           setLoading(false);
           setStatusText(undefined);
+          abortRef.current = null;
         },
         () => {
+          if (generation !== generationRef.current) return;
           setLoading(false);
           setStatusText(undefined);
+          abortRef.current = null;
         },
         languageHint,
+        options?.historyTruncateTo,
+        () => {
+          if (generation !== generationRef.current) return;
+          setLoading(false);
+          setStatusText(undefined);
+          abortRef.current = null;
+        },
       );
     },
     [sessionId],
   );
+
+  const handleStop = useCallback(() => {
+    generationRef.current += 1;
+    abortRef.current?.();
+    abortRef.current = null;
+    setLoading(false);
+    setStatusText(undefined);
+    setEditingId(null);
+    setEditDraft("");
+  }, []);
 
   useEffect(() => {
     if (!isWelcome) return;
@@ -154,14 +182,22 @@ export function ChatApp() {
       queryHandled.current = true;
       sessionStorage.removeItem(PENDING_QUERY_KEY);
       sessionStorage.setItem(CHAT_STARTED_KEY, "1");
-      sendMessage(pending);
+
+      const userMsg: ChatMessage = {
+        id: uuidv4(),
+        role: "user",
+        content: pending,
+        timestamp: Date.now(),
+      };
+      setMessages((m) => [...m, userMsg]);
+      startStream(pending);
       return;
     }
 
     if (!sessionStorage.getItem(CHAT_STARTED_KEY)) {
       navigate("/", { replace: true });
     }
-  }, [location.pathname, navigate, sendMessage]);
+  }, [location.pathname, navigate, startStream]);
 
   const handleSend = useCallback(
     (text: string) => {
@@ -174,11 +210,52 @@ export function ChatApp() {
         return;
       }
 
-      sendMessage(trimmed);
+      const userMsg: ChatMessage = {
+        id: uuidv4(),
+        role: "user",
+        content: trimmed,
+        timestamp: Date.now(),
+      };
+      setMessages((m) => [...m, userMsg]);
+      setInput("");
       sessionStorage.setItem(CHAT_STARTED_KEY, "1");
+      startStream(trimmed);
     },
-    [isWelcome, loading, navigate, sendMessage],
+    [isWelcome, loading, navigate, startStream],
   );
+
+  const handleStartEdit = useCallback((message: ChatMessage) => {
+    if (loading || message.role !== "user" || message.id === "welcome") return;
+    setEditingId(message.id);
+    setEditDraft(message.content);
+  }, [loading]);
+
+  const handleEditCancel = useCallback(() => {
+    setEditingId(null);
+    setEditDraft("");
+  }, []);
+
+  const handleEditSubmit = useCallback(() => {
+    if (!editingId || loading) return;
+    const trimmed = editDraft.trim();
+    if (!trimmed) return;
+
+    const editIndex = messages.findIndex((m) => m.id === editingId);
+    if (editIndex === -1) return;
+
+    const historyTruncateTo = messages
+      .slice(0, editIndex)
+      .filter((m) => m.id !== "welcome").length;
+
+    setMessages((prev) => {
+      const next = prev.slice(0, editIndex + 1);
+      next[editIndex] = { ...next[editIndex], content: trimmed, timestamp: Date.now() };
+      return next;
+    });
+    setEditingId(null);
+    setEditDraft("");
+    startStream(trimmed, { historyTruncateTo });
+  }, [editDraft, editingId, loading, messages, startStream]);
 
   const handleAddProduct = async (product: Product) => {
     if (!sessionId) return;
@@ -237,6 +314,13 @@ export function ChatApp() {
   );
   const cartCount = useMemo(() => cart.reduce((s, i) => s + i.quantity, 0), [cart]);
 
+  const lastAssistantId = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "assistant" && messages[i].id !== "welcome") return messages[i].id;
+    }
+    return null;
+  }, [messages]);
+
   return (
     <div
       className={cn(
@@ -251,17 +335,8 @@ export function ChatApp() {
         animate={{ opacity: 1, y: 0 }}
         transition={isWelcome ? { delay: 0.62, duration: 0.5, ease: [0.22, 1, 0.36, 1] } : { duration: 0 }}
       >
-        <div className="mx-auto flex max-w-4xl items-center justify-between gap-2 px-4 py-3">
-          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={() => setTrackOpen(true)}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs font-semibold text-white/90 transition hover:border-brand-gold/50 hover:bg-white/20 sm:px-3"
-            >
-              <Package className="h-3.5 w-3.5 text-brand-gold" />
-              <span className="whitespace-nowrap">Track order</span>
-            </button>
-            <div className="min-w-0 leading-tight">
+        <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
+          <div className="min-w-0 leading-tight">
             <h1 className="flex items-center gap-2 text-lg font-bold tracking-tight">
               <span className="bg-gradient-to-r from-brand-gold to-white bg-clip-text text-transparent">
                 Tharu
@@ -270,52 +345,39 @@ export function ChatApp() {
                 Kapruka AI
               </span>
             </h1>
-            <p className="truncate text-xs text-white/70">Your star for finding the perfect gift</p>
-          </div>
+            <p className="hidden truncate text-xs text-white/70 sm:block">
+              Your star for finding the perfect gift
+            </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setCartOpen(true)}
-              className={cn(
-                "relative flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm shadow-sm transition",
-                cartCount > 0
-                  ? "border-white/20 bg-white/95 hover:border-brand-gold/50"
-                  : "border-white/15 bg-white/10 text-white/80 hover:border-white/30 hover:bg-white/15",
-              )}
-            >
-              <span className="relative flex h-7 w-7 items-center justify-center rounded-full bg-brand-purple text-white">
-                <ShoppingCart className="h-3.5 w-3.5" />
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <button type="button" onClick={() => setTrackOpen(true)} className={headerPillClass}>
+              <Package className="h-3.5 w-3.5 shrink-0 text-brand-gold" />
+              <span className="hidden whitespace-nowrap sm:inline">Track order</span>
+              <span className="whitespace-nowrap sm:hidden">Track</span>
+            </button>
+            <button type="button" onClick={() => setCartOpen(true)} className={headerPillClass}>
+              <span className="relative shrink-0">
+                <ShoppingCart className="h-3.5 w-3.5 text-brand-gold" />
                 {cartCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-gold px-1 text-[10px] font-bold text-text-primary">
+                  <span className="absolute -right-1.5 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-brand-gold px-0.5 text-[9px] font-bold leading-none text-text-primary">
                     {cartCount}
                   </span>
                 )}
               </span>
-              {cartCount > 0 ? (
-                <span className="font-semibold text-brand-purple">{formatPrice(cartTotal)}</span>
-              ) : (
-                <span className="hidden text-xs font-medium sm:inline">Cart</span>
-              )}
+              <span className="whitespace-nowrap">
+                {cartCount > 0 ? formatPrice(cartTotal) : "Cart"}
+              </span>
             </button>
-
-            <Button variant="outline" size="sm" className="hidden gap-1.5 border-white/25 bg-white/10 text-white hover:bg-white/20 sm:inline-flex" asChild>
-              <a href="https://www.kapruka.com/" target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-3.5 w-3.5" />
-                Kapruka
-              </a>
-            </Button>
-            <Button variant="outline" size="icon" className="h-9 w-9 border-white/25 bg-white/10 text-white hover:bg-white/20 sm:hidden" asChild>
-              <a
-                href="https://www.kapruka.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Visit Kapruka.com"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </Button>
+            <a
+              href="https://www.kapruka.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={headerKaprukaClass}
+            >
+              <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+              <span className="whitespace-nowrap">Kapruka</span>
+            </a>
           </div>
         </div>
       </motion.header>
@@ -392,6 +454,17 @@ export function ChatApp() {
                     message={msg}
                     onAddProduct={handleAddProduct}
                     onViewProduct={setDetailProduct}
+                    canEdit={msg.role === "user" && msg.id !== "welcome" && !loading}
+                    isEditing={editingId === msg.id}
+                    editDraft={editingId === msg.id ? editDraft : undefined}
+                    onEditStart={() => handleStartEdit(msg)}
+                    onEditDraftChange={setEditDraft}
+                    onEditSubmit={handleEditSubmit}
+                    onEditCancel={handleEditCancel}
+                    followUps={
+                      msg.id === lastAssistantId && !loading ? msg.followUpQuestions : undefined
+                    }
+                    onFollowUpSelect={handleSend}
                   />
                 </motion.div>
               ))}
@@ -414,7 +487,7 @@ export function ChatApp() {
           {isWelcome && (
             <WelcomeSamplePrompts
               className="mb-3"
-              prompts={t.samplePrompts}
+              prompts={samplePrompts}
               onSelect={handleSend}
               disabled={loading}
             />
@@ -436,17 +509,23 @@ export function ChatApp() {
               onFocus={() => setInputFocused(true)}
               onBlur={() => setInputFocused(false)}
               placeholder={t.placeholder}
-              disabled={loading}
               className="h-9 flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none disabled:opacity-60"
             />
             <Button
-              type="submit"
+              type={loading ? "button" : "submit"}
               size="icon"
               variant="secondary"
-              disabled={loading || !input.trim()}
-              className="h-10 w-10 rounded-xl shadow-md shadow-brand-purple/20"
+              disabled={!loading && !input.trim()}
+              onClick={loading ? handleStop : undefined}
+              className={cn(
+                "h-10 w-10 rounded-xl shadow-md",
+                loading
+                  ? "bg-text-primary text-white shadow-black/20 hover:bg-text-primary/90"
+                  : "shadow-brand-purple/20",
+              )}
+              aria-label={loading ? "Stop generating" : "Send message"}
             >
-              <Send className="h-4 w-4" />
+              {loading ? <Square className="h-3.5 w-3.5 fill-current" /> : <Send className="h-4 w-4" />}
             </Button>
           </form>
         </div>

@@ -47,6 +47,8 @@ def run_conversation_agent(
             tone="excited",
             follow_up_questions=[
                 "Want a gift message on the card?" if lang == "en" else "Gift message ekak oneda?" if lang == "singlish" else "Gift message එකක් ඕනද?",
+                "Show cheaper options" if lang == "en" else "Lassana options" if lang == "singlish" else "වඩා අඩු මිලේ options",
+                "Something for delivery tomorrow" if lang == "en" else "Heta deliver karanna puluwanda?" if lang == "singlish" else "හෙට deliver කරන්න පුළුවන්ද?",
             ],
         )  # type: ignore[arg-type]
 

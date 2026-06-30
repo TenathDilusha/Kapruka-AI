@@ -174,9 +174,6 @@ async def conversation_node(state: GraphState) -> GraphState:
         bundle_count=len(bundles) or len(gifts.bundles),
         language=intent.language,
     )
-    if follow_ups and not products:
-        msg += "\n\n" + "\n".join(f"• {q}" for q in follow_ups[:2])
-
     conversation = ConversationResult(message=msg, language=lang, follow_up_questions=follow_ups)  # type: ignore[arg-type]
     memory = get_memory(state["session_id"])
     memory.record_turn("assistant", conversation.message)
