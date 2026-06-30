@@ -42,10 +42,10 @@ const t = UI.en;
 const TRUST_ICONS = [ShoppingCart, Truck, Sparkles] as const;
 
 const headerPillClass =
-  "relative inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs font-semibold text-white/90 transition hover:border-brand-gold/50 hover:bg-white/20 sm:px-3";
+  "relative inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-medium text-white/90 transition hover:border-white/20 hover:bg-white/10 sm:px-3";
 
 const headerKaprukaClass =
-  "inline-flex shrink-0 items-center gap-1.5 rounded-full border border-brand-gold/50 bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-purple shadow-sm transition hover:border-brand-gold hover:bg-brand-gold hover:text-text-primary sm:px-3";
+  "inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand-gold px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-brand-gold-dark sm:px-3.5";
 
 const welcomeReveal = {
   hidden: { opacity: 0, y: 14 },
@@ -330,24 +330,27 @@ export function ChatApp() {
     >
       {/* Header */}
       <motion.header
-        className="sticky top-0 z-20 border-b border-white/10 bg-kapruka/90 backdrop-blur-xl"
+        className="sticky top-0 z-20 border-b border-border bg-canvas/95 backdrop-blur-xl"
         initial={isWelcome ? { opacity: 0, y: -10 } : false}
         animate={{ opacity: 1, y: 0 }}
         transition={isWelcome ? { delay: 0.62, duration: 0.5, ease: [0.22, 1, 0.36, 1] } : { duration: 0 }}
       >
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
-          <div className="min-w-0 leading-tight">
-            <h1 className="flex items-center gap-2 text-lg font-bold tracking-tight">
-              <span className="bg-gradient-to-r from-brand-gold to-white bg-clip-text text-transparent">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-kapruka text-sm font-bold text-brand-gold">
+              T
+            </span>
+            <div className="min-w-0 leading-tight">
+              <h1 className="flex items-center gap-2 text-base font-semibold tracking-tight text-white">
                 Tharu
-              </span>
-              <span className="hidden rounded-full bg-brand-gold/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-brand-gold sm:inline">
-                Kapruka AI
-              </span>
-            </h1>
-            <p className="hidden truncate text-xs text-white/70 sm:block">
-              Your star for finding the perfect gift
-            </p>
+                <span className="hidden rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/70 sm:inline">
+                  Kapruka AI
+                </span>
+              </h1>
+              <p className="hidden truncate text-xs text-text-muted sm:block">
+                Your gift concierge
+              </p>
+            </div>
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -360,7 +363,7 @@ export function ChatApp() {
               <span className="relative shrink-0">
                 <ShoppingCart className="h-3.5 w-3.5 text-brand-gold" />
                 {cartCount > 0 && (
-                  <span className="absolute -right-1.5 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-brand-gold px-0.5 text-[9px] font-bold leading-none text-text-primary">
+                  <span className="absolute -right-1.5 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-brand-gold px-0.5 text-[9px] font-bold leading-none text-black">
                     {cartCount}
                   </span>
                 )}
@@ -385,9 +388,9 @@ export function ChatApp() {
       {/* Main content */}
       {isWelcome ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="relative min-h-0 flex-1 overflow-hidden">
+          <div className="relative min-h-0 flex-1 overflow-hidden bg-kapruka">
             <TharuAvatar variant="hero" state={heroState} className="absolute inset-0" />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-kapruka via-kapruka/85 to-transparent px-4 pb-3 pt-12 text-center sm:pb-4 sm:pt-16">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-kapruka via-kapruka/90 to-transparent px-4 pb-3 pt-12 text-center sm:pb-4 sm:pt-16">
               <motion.h2
                 className="text-xl font-bold tracking-tight text-white sm:text-2xl"
                 initial={isWelcome ? "hidden" : false}
@@ -424,7 +427,7 @@ export function ChatApp() {
           </div>
 
           <motion.div
-            className="shrink-0 border-t border-white/10 bg-kapruka-dark/50 px-4 py-2.5 backdrop-blur-md sm:py-3"
+            className="shrink-0 border-t border-white/10 bg-kapruka px-4 py-2.5 sm:py-3"
             initial={isWelcome ? "hidden" : false}
             animate="show"
             custom={1.02}
@@ -477,7 +480,7 @@ export function ChatApp() {
 
       {/* Composer */}
       <motion.footer
-        className="border-t border-white/10 bg-kapruka/90 backdrop-blur-xl"
+        className="border-t border-border bg-canvas/95 backdrop-blur-xl"
         initial={isWelcome ? "hidden" : false}
         animate="show"
         custom={1.14}
@@ -494,34 +497,35 @@ export function ChatApp() {
           )}
           <form
             className={cn(
-              "flex items-center gap-2 rounded-2xl border bg-white p-1.5 pl-4 shadow-lg shadow-black/10 transition",
-              inputFocused ? "border-brand-gold ring-4 ring-brand-gold/20" : "border-white/20",
+              "flex items-center gap-2 rounded-xl border bg-surface p-1.5 pl-4 transition",
+              inputFocused
+                ? "border-brand-gold/50 ring-2 ring-brand-gold/15"
+                : "border-border",
             )}
             onSubmit={(e) => {
               e.preventDefault();
               handleSend(input);
             }}
           >
-            <Gift className="h-5 w-5 shrink-0 text-brand-purple/60" />
+            <Gift className="h-5 w-5 shrink-0 text-text-muted" />
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onFocus={() => setInputFocused(true)}
               onBlur={() => setInputFocused(false)}
               placeholder={t.placeholder}
-              className="h-9 flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none disabled:opacity-60"
+              className="h-9 flex-1 bg-transparent text-sm text-white placeholder:text-text-muted focus:outline-none disabled:opacity-60"
             />
             <Button
               type={loading ? "button" : "submit"}
               size="icon"
-              variant="secondary"
               disabled={!loading && !input.trim()}
               onClick={loading ? handleStop : undefined}
               className={cn(
-                "h-10 w-10 rounded-xl shadow-md",
+                "h-10 w-10 rounded-lg",
                 loading
-                  ? "bg-text-primary text-white shadow-black/20 hover:bg-text-primary/90"
-                  : "shadow-brand-purple/20",
+                  ? "bg-white/20 text-white hover:bg-white/30"
+                  : "bg-kapruka text-white hover:bg-kapruka-dark",
               )}
               aria-label={loading ? "Stop generating" : "Send message"}
             >

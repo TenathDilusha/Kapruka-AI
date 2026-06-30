@@ -74,11 +74,11 @@ export function ChatBubble({
         <div>
           <div
             className={cn(
-              "rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm",
+              "rounded-2xl px-4 py-3 text-sm leading-relaxed",
               isUser
-                ? "rounded-tr-md bg-gradient-to-br from-brand-gold to-brand-gold-dark text-text-primary"
-                : "rounded-tl-md border border-brand-purple/15 bg-gradient-to-br from-white to-brand-purple-light/30 text-text-primary",
-              isEditing && "ring-2 ring-brand-purple/30",
+                ? "rounded-tr-md bg-kapruka text-white"
+                : "rounded-tl-md border border-border bg-surface text-text-primary",
+              isEditing && "ring-2 ring-kapruka/30",
             )}
           >
             {isUser && isEditing ? (
@@ -87,7 +87,7 @@ export function ChatBubble({
                 onChange={(e) => onEditDraftChange?.(e.target.value)}
                 rows={3}
                 autoFocus
-                className="w-full resize-none bg-transparent text-sm leading-relaxed text-text-primary focus:outline-none"
+                className="w-full resize-none bg-transparent text-sm leading-relaxed text-white placeholder:text-white/60 focus:outline-none"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
@@ -104,7 +104,7 @@ export function ChatBubble({
                 href={message.checkoutUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 inline-flex rounded-xl bg-brand-purple px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-purple/25 hover:bg-brand-purple-dark"
+                className="mt-3 inline-flex rounded-lg bg-kapruka px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-kapruka-dark"
               >
                 Pay securely on Kapruka →
               </a>
@@ -115,7 +115,7 @@ export function ChatBubble({
             <button
               type="button"
               onClick={onEditStart}
-              className="mt-1 flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium text-white/45 opacity-100 transition hover:text-white/80 sm:opacity-0 sm:group-hover:opacity-100"
+              className="mt-1 flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium text-text-muted opacity-100 transition hover:text-white sm:opacity-0 sm:group-hover:opacity-100"
             >
               <Pencil className="h-3 w-3" />
               Edit
@@ -130,7 +130,7 @@ export function ChatBubble({
               variant="outline"
               size="sm"
               onClick={onEditCancel}
-              className="h-8 gap-1 border-white/25 bg-white/10 text-white hover:bg-white/20"
+              className="h-8 gap-1 border-border bg-surface text-text-primary hover:bg-white/5"
             >
               <X className="h-3.5 w-3.5" />
               Cancel
@@ -140,7 +140,7 @@ export function ChatBubble({
               size="sm"
               disabled={!editDraft?.trim()}
               onClick={onEditSubmit}
-              className="h-8 bg-brand-purple text-white hover:bg-brand-purple-dark"
+              className="h-8 bg-kapruka text-white hover:bg-kapruka-dark"
             >
               Send
             </Button>
@@ -175,7 +175,7 @@ export function ChatBubble({
                 key={question}
                 type="button"
                 onClick={() => onFollowUpSelect(question)}
-                className="rounded-full border border-brand-purple/20 bg-white px-3 py-1.5 text-left text-xs font-medium leading-snug text-brand-purple shadow-sm transition hover:border-brand-purple/40 hover:bg-brand-purple-light/40"
+                className="rounded-lg border border-border bg-surface px-3 py-1.5 text-left text-xs font-medium leading-snug text-white/90 transition hover:border-brand-gold/40 hover:bg-white/5"
               >
                 {question}
               </button>
@@ -190,9 +190,9 @@ export function ChatBubble({
 export function TypingIndicator({ status }: { status?: string }) {
   return (
     <div className="flex justify-start" role="status" aria-live="polite">
-      <div className="flex items-center gap-3 rounded-2xl rounded-tl-md border border-brand-purple/15 bg-gradient-to-br from-white to-brand-purple-light/40 px-4 py-3 shadow-sm">
+      <div className="flex items-center gap-3 rounded-2xl rounded-tl-md border border-border bg-surface px-4 py-3">
         <KaprukaLogoSpinner size={36} />
-        <span className="text-xs font-medium text-brand-purple/70">{status ?? "Thinking…"}</span>
+        <span className="text-xs font-medium text-text-muted">{status ?? "Thinking…"}</span>
       </div>
     </div>
   );

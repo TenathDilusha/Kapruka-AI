@@ -27,11 +27,11 @@ export function GiftOptionCard({ option, onSelect, className, layout = "grid" }:
         transition={{ duration: 0.35, ease: "easeOut" }}
         onClick={() => onSelect(option.prompt)}
         className={cn(
-          "group flex w-full items-stretch overflow-hidden rounded-2xl border border-brand-purple/20 bg-white text-left shadow-md shadow-brand-purple/10 transition hover:border-brand-gold/50 hover:shadow-lg",
+          "group flex w-full items-stretch overflow-hidden rounded-xl border border-border bg-surface text-left transition hover:border-brand-gold/30",
           className,
         )}
       >
-        <div className="relative aspect-[4/3] w-[38%] min-w-[7rem] max-w-[9.5rem] shrink-0 overflow-hidden bg-gradient-to-br from-brand-purple-light via-white to-brand-gold/10 sm:w-[34%]">
+        <div className="relative aspect-[4/3] w-[38%] min-w-[7rem] max-w-[9.5rem] shrink-0 overflow-hidden bg-kapruka-dark sm:w-[34%]">
           {option.image_url ? (
             <img
               src={option.image_url}
@@ -48,18 +48,18 @@ export function GiftOptionCard({ option, onSelect, className, layout = "grid" }:
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col justify-center px-3 py-2.5 sm:px-4 sm:py-3">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-brand-purple/70">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
             {typeLabel}
           </span>
-          <p className="mt-0.5 line-clamp-2 text-sm font-bold leading-snug text-text-primary sm:text-base">
+          <p className="mt-0.5 line-clamp-2 text-sm font-bold leading-snug text-white sm:text-base">
             {productName}
           </p>
           {option.price?.amount != null && (
-            <p className="mt-1.5 text-xs font-bold text-brand-purple sm:text-sm">
+            <p className="mt-1.5 text-xs font-bold text-brand-gold sm:text-sm">
               {formatPrice(option.price.amount, option.price.currency)}
             </p>
           )}
-          <span className="mt-2 text-[10px] font-medium text-text-muted group-hover:text-brand-purple">
+          <span className="mt-2 text-[10px] font-medium text-text-muted group-hover:text-brand-gold">
             Tap to explore →
           </span>
         </div>
@@ -74,11 +74,11 @@ export function GiftOptionCard({ option, onSelect, className, layout = "grid" }:
       whileTap={{ scale: 0.98 }}
       onClick={() => onSelect(option.prompt)}
       className={cn(
-        "group relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl border border-brand-purple/15 bg-white text-left shadow-sm transition hover:border-brand-purple/35 hover:shadow-md hover:shadow-brand-purple/10",
+        "group relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface text-left transition hover:border-brand-gold/30",
         className,
       )}
     >
-      <div className="relative aspect-[5/4] overflow-hidden bg-gradient-to-br from-brand-purple-light via-white to-brand-gold/10">
+      <div className="relative aspect-[5/4] overflow-hidden bg-kapruka-dark">
         {option.image_url ? (
           <img
             src={option.image_url}
@@ -101,9 +101,9 @@ export function GiftOptionCard({ option, onSelect, className, layout = "grid" }:
         )}
       </div>
 
-      <div className="relative border-t border-brand-purple/10 bg-white px-2 py-2">
-        <p className="line-clamp-1 text-[10px] font-bold leading-tight text-text-primary">{productName}</p>
-        <p className="mt-0.5 text-[9px] font-medium text-brand-purple/80">{typeLabel}</p>
+      <div className="relative border-t border-border bg-surface px-2 py-2">
+        <p className="line-clamp-1 text-[10px] font-bold leading-tight text-white">{productName}</p>
+        <p className="mt-0.5 text-[9px] font-medium text-text-muted">{typeLabel}</p>
       </div>
     </motion.button>
   );
@@ -175,7 +175,7 @@ function SpotlightCarousel({
                 onClick={() => setIndex(i)}
                 className={cn(
                   "h-1.5 rounded-full transition-all",
-                  i === index ? "w-5 bg-brand-gold" : "w-1.5 bg-white/30 hover:bg-white/50",
+                  i === index ? "w-5 bg-brand-gold" : "w-1.5 bg-white/20 hover:bg-white/40",
                 )}
               />
             ))}
@@ -200,7 +200,7 @@ export function GiftOptionsStrip({
   if (loading) {
     return (
       <div className="flex flex-col items-center gap-2 py-1">
-        <p className="text-center text-xs font-semibold uppercase tracking-wider text-brand-gold/90">
+        <p className="text-center text-[11px] font-semibold uppercase tracking-wider text-brand-gold/90">
           Kapruka bestsellers
         </p>
         <KaprukaLogoSpinner size={40} onPurple />
@@ -214,7 +214,7 @@ export function GiftOptionsStrip({
 
   return (
     <div className="space-y-2.5">
-      <p className="text-center text-xs font-semibold uppercase tracking-wider text-brand-gold/90">
+      <p className="text-center text-[11px] font-semibold uppercase tracking-wider text-brand-gold/90">
         Kapruka bestsellers
       </p>
 

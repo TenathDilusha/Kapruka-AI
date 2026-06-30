@@ -13,23 +13,22 @@ export function formatPrice(amount: number | null | undefined, currency = "LKR")
 
 /** Fix broken entity encoding from Kapruka catalog (e.g. N#8220; → "). */
 export function sanitizeText(text: string): string {
+  const decodeEntity = (code: string) => {
+    const n = Number(code);
+    try {
+      return String.fromCodePoint(n);
+    } catch {
+      return "";
+    }
+  };
+
   return text
-    .replace(/N#(\d+);/g, (_, code) => {
-      const n = Number(code);
-      try {
-        return String.fromCodePoint(n);
-      } catch {
-        return "";
-      }
-    })
-    .replace(/&#(\d+);/g, (_, code) => {
-      const n = Number(code);
-      try {
-        return String.fromCodePoint(n);
-      } catch {
-        return "";
-      }
-    })
+    .replace(/â?n#(\d+);/gi, (_, code) => decodeEntity(code))
+    .replace(/N#(\d+);/g, (_, code) => decodeEntity(code))
+    .replace(/&#(\d+);/g, (_, code) => decodeEntity(code))
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
     .replace(/\*\*(.*?)\*\*/g, "$1")
     .trim();
 }

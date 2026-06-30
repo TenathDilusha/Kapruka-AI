@@ -29,11 +29,11 @@ export function ProductCard({ product, onAdd, onViewDetails, compact = false }: 
       whileHover={{ y: -3 }}
       transition={{ type: "spring", stiffness: 320, damping: 22 }}
       className={cn(
-        "group flex flex-col overflow-hidden rounded-2xl border border-brand-purple/15 bg-white shadow-sm transition hover:border-brand-purple/35 hover:shadow-lg hover:shadow-brand-purple/10",
+        "group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface transition hover:border-brand-gold/30",
         compact ? "w-full" : "w-full",
       )}
     >
-      <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-brand-purple-light via-white to-brand-gold/10">
+      <div className="relative aspect-square overflow-hidden bg-kapruka-dark">
         {product.image_url ? (
           <img
             src={product.image_url}
@@ -42,39 +42,39 @@ export function ProductCard({ product, onAdd, onViewDetails, compact = false }: 
             loading="lazy"
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-brand-purple/30">
+          <div className="flex h-full items-center justify-center text-white/20">
             <Sparkles className="h-10 w-10" />
           </div>
         )}
 
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-purple/25 via-transparent to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
 
         {product.in_stock ? (
-          <span className="absolute left-2 top-2 rounded-full bg-brand-purple/90 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm backdrop-blur">
+          <span className="absolute left-2 top-2 rounded-full bg-kapruka/90 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur">
             In stock
           </span>
         ) : (
-          <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-text-muted shadow-sm backdrop-blur">
+          <span className="absolute left-2 top-2 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-text-muted backdrop-blur">
             Sold out
           </span>
         )}
 
         {product.category?.name && (
-          <span className="absolute right-2 top-2 rounded-full bg-brand-gold/90 px-2 py-0.5 text-[10px] font-semibold text-text-primary shadow-sm">
+          <span className="absolute right-2 top-2 rounded-full bg-brand-gold px-2 py-0.5 text-[10px] font-semibold text-black">
             {product.category.name}
           </span>
         )}
       </div>
 
-      <div className="flex flex-1 flex-col gap-2 border-t border-brand-purple/10 bg-gradient-to-b from-white to-brand-purple-light/30 p-3">
-        <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-snug text-brand-purple">
+      <div className="flex flex-1 flex-col gap-2 border-t border-border bg-canvas p-3">
+        <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-snug text-white">
           {name}
         </h3>
         {summary && !compact && (
           <p className="line-clamp-2 text-[11px] leading-relaxed text-text-muted">{summary}</p>
         )}
 
-        <p className="text-base font-bold text-brand-purple">
+        <p className="text-base font-bold text-brand-gold">
           {formatPrice(product.price.amount, product.price.currency)}
         </p>
 
@@ -82,7 +82,7 @@ export function ProductCard({ product, onAdd, onViewDetails, compact = false }: 
           <button
             type="button"
             onClick={() => (onViewDetails ? onViewDetails(product) : window.open(kaprukaUrl, "_blank"))}
-            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-brand-purple/25 bg-white px-3 py-2 text-xs font-semibold text-brand-purple transition hover:border-brand-purple hover:bg-brand-purple-light"
+            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white transition hover:border-white/20 hover:bg-white/10"
           >
             <ExternalLink className="h-3.5 w-3.5" />
             {onViewDetails ? "Details" : "View on Kapruka"}
@@ -95,7 +95,7 @@ export function ProductCard({ product, onAdd, onViewDetails, compact = false }: 
               "inline-flex shrink-0 items-center justify-center gap-1 rounded-xl px-2.5 py-2 text-[11px] font-semibold whitespace-nowrap transition disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:gap-1.5 sm:px-3 sm:text-xs",
               added
                 ? "bg-emerald-500 text-white"
-                : "bg-brand-gold text-text-primary hover:bg-brand-gold-dark",
+                : "bg-brand-gold text-black hover:bg-brand-gold-dark",
             )}
           >
             {added ? <Check className="h-3.5 w-3.5 shrink-0" /> : <ShoppingCart className="h-3.5 w-3.5 shrink-0" />}
@@ -125,8 +125,8 @@ export function ProductGrid({
   return (
     <div className={cn("space-y-3", className)}>
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-sm font-bold text-brand-purple">{title}</h4>
-        <span className="rounded-full bg-brand-purple-light px-2.5 py-0.5 text-[10px] font-semibold text-brand-purple">
+        <h4 className="text-sm font-bold text-white">{title}</h4>
+        <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-semibold text-text-muted">
           {products.length} items
         </span>
       </div>

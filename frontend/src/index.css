@@ -12,9 +12,11 @@
   --color-brand-purple-light: #f3ebff;
   --color-brand-purple-muted: #e2d4fc;
   --color-ink: #0e0f17;
-  --color-text-primary: #1e1033;
-  --color-text-muted: #6c757d;
-  --color-border: #ececf3;
+  --color-text-primary: #f4f4f5;
+  --color-text-muted: #a1a1aa;
+  --color-border: #27272a;
+  --color-surface: #141414;
+  --color-canvas: #0a0a0a;
 }
 
 * {
@@ -31,14 +33,14 @@ body,
 
 body {
   font-family: var(--font-sans);
-  background: var(--color-kapruka);
+  background: var(--color-canvas);
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
 }
 
 .tharu-backdrop {
-  background: var(--color-kapruka);
-  color: #f8f5ff;
+  background: var(--color-canvas);
+  color: var(--color-text-primary);
 }
 
 .scrollbar-thin::-webkit-scrollbar {
