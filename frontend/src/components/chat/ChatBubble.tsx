@@ -19,6 +19,8 @@ interface ChatBubbleProps {
   onEditDraftChange?: (value: string) => void;
   onEditSubmit?: () => void;
   onEditCancel?: () => void;
+  followUps?: string[];
+  onFollowUpSelect?: (prompt: string) => void;
 }
 
 function dedupeProducts(products: Product[]): Product[] {
@@ -41,6 +43,8 @@ export function ChatBubble({
   onEditDraftChange,
   onEditSubmit,
   onEditCancel,
+  followUps,
+  onFollowUpSelect,
 }: ChatBubbleProps) {
   const isUser = message.role === "user";
 
@@ -162,6 +166,21 @@ export function ChatBubble({
 
         {!isUser && !message.bundles?.length && allProducts.length > 0 && (
           <ProductGrid products={allProducts} onAdd={onAddProduct} onViewDetails={onViewProduct} />
+        )}
+
+        {!isUser && followUps && followUps.length > 0 && onFollowUpSelect && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {followUps.map((question) => (
+              <button
+                key={question}
+                type="button"
+                onClick={() => onFollowUpSelect(question)}
+                className="rounded-full border border-brand-purple/20 bg-white px-3 py-1.5 text-left text-xs font-medium leading-snug text-brand-purple shadow-sm transition hover:border-brand-purple/40 hover:bg-brand-purple-light/40"
+              >
+                {question}
+              </button>
+            ))}
+          </div>
         )}
       </div>
     </div>

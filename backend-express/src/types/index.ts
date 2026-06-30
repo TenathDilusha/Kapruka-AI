@@ -43,6 +43,7 @@ export interface ChatMessage {
   checkoutUrl?: string;
   orderRef?: string;
   status?: "thinking" | "searching" | "done";
+  followUpQuestions?: string[];
   timestamp: number;
 }
 

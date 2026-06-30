@@ -50,6 +50,40 @@ function formatCartTotal(total: number, currency: string): string {
   return `${currency} ${total.toLocaleString()}`;
 }
 
+function defaultFollowUps(
+  agent: Awaited<ReturnType<typeof callPythonAgent>>,
+  productCount: number,
+  bundleCount: number,
+): string[] {
+  const fromAgent = (agent.conversation.follow_up_questions ?? []).map((q) => q.trim()).filter(Boolean);
+  if (fromAgent.length >= 2) return fromAgent.slice(0, 3);
+
+  const lang = agent.intent?.language ?? "en";
+  const extras: string[] = [];
+
+  if (productCount > 0) {
+    extras.push(
+      lang === "si" ? "වඩා අඩු මිලේ options" : lang === "singlish" ? "Cheaper options pennanna" : "Show cheaper options",
+      lang === "si" ? "Cart එකට add කරන්න" : lang === "singlish" ? "Cart ekata add karanna" : "Add one to my cart",
+      lang === "si" ? "වෙනත් gift ideas" : lang === "singlish" ? "Wena gift ideas" : "Show different gift ideas",
+    );
+  } else if (bundleCount > 0) {
+    extras.push(
+      lang === "si" ? "Budget එක කීයද?" : lang === "singlish" ? "Budget eka mokakda?" : "What's my budget?",
+      lang === "si" ? "Gift එක කාටද?" : lang === "singlish" ? "Gift eka kattiyata da?" : "Who is the gift for?",
+      lang === "si" ? "Kapruka products පෙන්වන්න" : lang === "singlish" ? "Kapruka products show karanna" : "Search Kapruka products",
+    );
+  } else {
+    extras.push(
+      "Birthday gift ideas",
+      "Roses and chocolates",
+      "Gifts under LKR 5,000",
+    );
+  }
+
+  return [...fromAgent, ...extras].filter((q, i, arr) => arr.indexOf(q) === i).slice(0, 3);
+}
+
 function mapBundles(bundles: AgentResultBundles): GiftBundle[] {
   return bundles.map((b) => ({
     id: b.id,
@@ -197,6 +231,7 @@ export async function handleChatMessage(
 
   const products = mapProducts(agent.products ?? []);
   const bundles = mapBundles(agent.bundles?.length ? agent.bundles : agent.gift_bundles.bundles);
+  const followUpQuestions = defaultFollowUps(agent, products.length, bundles.length);
 
   const assistantMsg: ChatMessage = {
     id: uuidv4(),
@@ -204,6 +239,7 @@ export async function handleChatMessage(
     content: agent.conversation.message,
     products: products.length > 0 ? products : undefined,
     bundles: bundles.length > 0 ? bundles : undefined,
+    followUpQuestions,
     timestamp: Date.now(),
     status: "done",
   };

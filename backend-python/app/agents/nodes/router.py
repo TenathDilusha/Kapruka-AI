@@ -191,7 +191,8 @@ Facts: {_facts_text(facts)}
 Products found: {product_count}, bundles: {bundle_count}
 Cart items in session: check if user is building multi-item cart — encourage adding complementary gifts.
 User said: {message}
-Be concise, warm, and guide toward cart, gift message, or checkout."""
+Be concise, warm, and guide toward cart, gift message, or checkout.
+Always include 2-3 short follow_up_questions (max 8 words each) the user might tap as their next message."""
 
     try:
         out = await structured.ainvoke([HumanMessage(content=prompt)])

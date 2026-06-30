@@ -41,6 +41,12 @@ const t = UI.en;
 
 const TRUST_ICONS = [ShoppingCart, Truck, Sparkles] as const;
 
+const headerPillClass =
+  "relative inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs font-semibold text-white/90 transition hover:border-brand-gold/50 hover:bg-white/20 sm:px-3";
+
+const headerKaprukaClass =
+  "inline-flex shrink-0 items-center gap-1.5 rounded-full border border-brand-gold/50 bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-purple shadow-sm transition hover:border-brand-gold hover:bg-brand-gold hover:text-text-primary sm:px-3";
+
 const welcomeReveal = {
   hidden: { opacity: 0, y: 14 },
   show: (delay: number) => ({
@@ -308,6 +314,13 @@ export function ChatApp() {
   );
   const cartCount = useMemo(() => cart.reduce((s, i) => s + i.quantity, 0), [cart]);
 
+  const lastAssistantId = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "assistant" && messages[i].id !== "welcome") return messages[i].id;
+    }
+    return null;
+  }, [messages]);
+
   return (
     <div
       className={cn(
@@ -322,17 +335,8 @@ export function ChatApp() {
         animate={{ opacity: 1, y: 0 }}
         transition={isWelcome ? { delay: 0.62, duration: 0.5, ease: [0.22, 1, 0.36, 1] } : { duration: 0 }}
       >
-        <div className="mx-auto flex max-w-4xl items-center justify-between gap-2 px-4 py-3">
-          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={() => setTrackOpen(true)}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs font-semibold text-white/90 transition hover:border-brand-gold/50 hover:bg-white/20 sm:px-3"
-            >
-              <Package className="h-3.5 w-3.5 text-brand-gold" />
-              <span className="whitespace-nowrap">Track order</span>
-            </button>
-            <div className="min-w-0 leading-tight">
+        <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
+          <div className="min-w-0 leading-tight">
             <h1 className="flex items-center gap-2 text-lg font-bold tracking-tight">
               <span className="bg-gradient-to-r from-brand-gold to-white bg-clip-text text-transparent">
                 Tharu
@@ -341,52 +345,39 @@ export function ChatApp() {
                 Kapruka AI
               </span>
             </h1>
-            <p className="truncate text-xs text-white/70">Your star for finding the perfect gift</p>
-          </div>
+            <p className="hidden truncate text-xs text-white/70 sm:block">
+              Your star for finding the perfect gift
+            </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setCartOpen(true)}
-              className={cn(
-                "relative flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm shadow-sm transition",
-                cartCount > 0
-                  ? "border-white/20 bg-white/95 hover:border-brand-gold/50"
-                  : "border-white/15 bg-white/10 text-white/80 hover:border-white/30 hover:bg-white/15",
-              )}
-            >
-              <span className="relative flex h-7 w-7 items-center justify-center rounded-full bg-brand-purple text-white">
-                <ShoppingCart className="h-3.5 w-3.5" />
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <button type="button" onClick={() => setTrackOpen(true)} className={headerPillClass}>
+              <Package className="h-3.5 w-3.5 shrink-0 text-brand-gold" />
+              <span className="hidden whitespace-nowrap sm:inline">Track order</span>
+              <span className="whitespace-nowrap sm:hidden">Track</span>
+            </button>
+            <button type="button" onClick={() => setCartOpen(true)} className={headerPillClass}>
+              <span className="relative shrink-0">
+                <ShoppingCart className="h-3.5 w-3.5 text-brand-gold" />
                 {cartCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-gold px-1 text-[10px] font-bold text-text-primary">
+                  <span className="absolute -right-1.5 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-brand-gold px-0.5 text-[9px] font-bold leading-none text-text-primary">
                     {cartCount}
                   </span>
                 )}
               </span>
-              {cartCount > 0 ? (
-                <span className="font-semibold text-brand-purple">{formatPrice(cartTotal)}</span>
-              ) : (
-                <span className="hidden text-xs font-medium sm:inline">Cart</span>
-              )}
+              <span className="whitespace-nowrap">
+                {cartCount > 0 ? formatPrice(cartTotal) : "Cart"}
+              </span>
             </button>
-
-            <Button variant="outline" size="sm" className="hidden gap-1.5 border-white/25 bg-white/10 text-white hover:bg-white/20 sm:inline-flex" asChild>
-              <a href="https://www.kapruka.com/" target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-3.5 w-3.5" />
-                Kapruka
-              </a>
-            </Button>
-            <Button variant="outline" size="icon" className="h-9 w-9 border-white/25 bg-white/10 text-white hover:bg-white/20 sm:hidden" asChild>
-              <a
-                href="https://www.kapruka.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Visit Kapruka.com"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </Button>
+            <a
+              href="https://www.kapruka.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={headerKaprukaClass}
+            >
+              <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+              <span className="whitespace-nowrap">Kapruka</span>
+            </a>
           </div>
         </div>
       </motion.header>
@@ -470,6 +461,10 @@ export function ChatApp() {
                     onEditDraftChange={setEditDraft}
                     onEditSubmit={handleEditSubmit}
                     onEditCancel={handleEditCancel}
+                    followUps={
+                      msg.id === lastAssistantId && !loading ? msg.followUpQuestions : undefined
+                    }
+                    onFollowUpSelect={handleSend}
                   />
                 </motion.div>
               ))}
