@@ -327,7 +327,6 @@ export function ChatApp() {
                 options={giftOptions}
                 loading={optionsLoading}
                 onSelect={handleSend}
-                suggestions={t.suggestions}
               />
             </div>
           </motion.div>

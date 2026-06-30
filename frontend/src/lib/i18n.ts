@@ -2,20 +2,16 @@ export type UserLanguage = "en" | "si" | "singlish";
 
 const SAMPLE_PROMPTS = [
   {
-    label: "Birthday gift for my mom under LKR 5,000",
-    prompt: "Birthday gift for my mom under LKR 5000 — show me options with delivery in Colombo",
+    label: "Birthday gift ideas",
+    prompt: "Birthday gift ideas for my mom under LKR 5000",
   },
   {
-    label: "Anniversary roses and chocolates",
-    prompt: "Anniversary gift with roses and chocolates for delivery tomorrow",
+    label: "Roses and chocolates",
+    prompt: "Anniversary gift with roses and chocolates",
   },
   {
-    label: "Valentine gift ideas under LKR 8,000",
-    prompt: "Valentine gift ideas under 8000 LKR for my partner",
-  },
-  {
-    label: "Wedding gift for a couple",
-    prompt: "Elegant wedding gift ideas for a couple — hampers or gift boxes",
+    label: "Gifts under LKR 5,000",
+    prompt: "Gift ideas under LKR 5000 for delivery in Colombo",
   },
 ] as const;
 
