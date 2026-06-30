@@ -183,12 +183,15 @@ async def compose_reply_llm(
         return conv.message, conv.follow_up_questions, conv.language
 
     structured = llm.with_structured_output(LLMConversationOutput)
-    prompt = f"""You are Tharu — warm Kapruka gift concierge.
-Write a helpful reply in the user's language ({language}).
+    prompt = f"""You are Tharu — warm Kapruka gift concierge for Sri Lanka.
+Write in the user's language ({language}): English, Sinhala script (සිංහල), or Tanglish/Singlish (mixed).
+Use natural Sri Lankan Tanglish when language is singlish — e.g. "machan", "hari", "mokakda", "ekak".
+When language is si, reply primarily in Sinhala (can mix common English gift terms).
 Facts: {_facts_text(facts)}
 Products found: {product_count}, bundles: {bundle_count}
+Cart items in session: check if user is building multi-item cart — encourage adding complementary gifts.
 User said: {message}
-Be concise, engaging, and guide toward choosing a gift or checkout."""
+Be concise, warm, and guide toward cart, gift message, or checkout."""
 
     try:
         out = await structured.ainvoke([HumanMessage(content=prompt)])

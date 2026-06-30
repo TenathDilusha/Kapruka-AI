@@ -2,11 +2,14 @@ export interface Product {
   id: string;
   name: string;
   summary?: string;
+  description?: string;
   price: { amount: number | null; currency: string };
   image_url?: string | null;
   url?: string;
   in_stock: boolean;
-  category?: { name: string };
+  category?: { name: string; slug?: string };
+  variants?: Array<{ id: string; name: string; price: { amount: number | null; currency: string }; in_stock: boolean }>;
+  stock_level?: string;
 }
 
 export interface BundleItem {
@@ -59,6 +62,7 @@ export interface GiftOption {
   short: string;
   prompt: string;
   query: string;
+  product_id: string | null;
   image_url: string | null;
   sample_product: string | null;
   price: { amount: number | null; currency: string } | null;

@@ -121,29 +121,29 @@ async def commerce_node(state: GraphState) -> GraphState:
     raw_products: list[KaprukaProduct] = []
     enriched: list[EnrichedBundle] = []
 
-    for search in strategy.searches[:3]:
+    for search in strategy.searches[:4]:
         for raw in mcp.search_products(
             search.query,
             category=search.category,
             max_price=search.max_price,
-            limit=5,
+            limit=8,
         ):
             raw_products.append(_to_product(raw))
 
     for bundle in gifts.bundles[:2]:
         bundle_products: list[KaprukaProduct] = []
-        for item in bundle.items[:2]:
+        for item in bundle.items[:4]:
             for raw in mcp.search_products(
                 item.search_query,
                 category=item.category,
                 max_price=intent.budget_max,
-                limit=3,
+                limit=5,
             ):
                 bundle_products.append(_to_product(raw))
-        enriched.append(EnrichedBundle(**bundle.model_dump(), products=_dedupe(bundle_products)[:6]))
+        enriched.append(EnrichedBundle(**bundle.model_dump(), products=_dedupe(bundle_products)[:8]))
 
     memory = get_memory(state["session_id"])
-    products = _dedupe(raw_products)[:12]
+    products = _dedupe(raw_products)[:16]
     memory.last_products = [p.model_dump() for p in products]
     memory.last_bundles = [b.model_dump() for b in enriched]
 

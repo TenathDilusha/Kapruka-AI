@@ -61,3 +61,37 @@ npm run dev:python     # http://localhost:8000
 Try: *"Birthday gift for mom under 5000"* or *"Anniversary roses and chocolates"*
 
 Health: `GET /health` on both backends.
+
+## Deploy on Render
+
+### Express (`backend-express`)
+
+| Setting | Value |
+|---------|--------|
+| Root Directory | `backend-express` |
+| Build Command | `npm install --include=dev && npm run build` |
+| Start Command | `npm start` |
+| Health Check | `/health` |
+
+**Environment variables**
+
+| Variable | Example |
+|----------|---------|
+| `PYTHON_AGENT_URL` | `https://your-python-service.onrender.com` |
+| `FRONTEND_URL` | `https://your-frontend.onrender.com` |
+| `KAPRUKA_MCP_URL` | `https://mcp.kapruka.com/mcp` |
+
+`PORT` is set automatically by Render. Do **not** use `yarn start` alone — you must run `npm run build` so `dist/index.js` exists.
+
+### Python (`backend-python`)
+
+| Setting | Value |
+|---------|--------|
+| Root Directory | `backend-python` |
+| Build Command | `pip install -r requirements.txt` |
+| Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| Health Check | `/health` |
+
+Set `OPENAI_API_KEY` in Render environment variables.
+
+Or use the repo `render.yaml` blueprint for both services.

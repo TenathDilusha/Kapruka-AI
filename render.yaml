@@ -1,0 +1,35 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: kapruka-ai-express
+    runtime: node
+    rootDir: backend-express
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: PYTHON_AGENT_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: KAPRUKA_MCP_URL
+        value: https://mcp.kapruka.com/mcp
+
+  - type: web
+    name: kapruka-ai-python
+    runtime: python
+    rootDir: backend-python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: KAPRUKA_MCP_URL
+        value: https://mcp.kapruka.com/mcp
+      - key: LLM_ENABLED
+        value: "true"

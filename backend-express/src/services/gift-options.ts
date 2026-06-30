@@ -6,95 +6,75 @@ export interface GiftOption {
   short: string;
   prompt: string;
   query: string;
+  product_id: string | null;
   image_url: string | null;
   sample_product: string | null;
   price: { amount: number | null; currency: string } | null;
 }
 
-const OPTION_QUERIES: Array<{
+/** One bestseller per Kapruka product type (not occasion). */
+const BESTSELLER_TYPES: Array<{
   id: string;
-  label: string;
-  short: string;
-  prompt: string;
+  typeLabel: string;
   query: string;
-  category?: string;
 }> = [
-  {
-    id: "birthday",
-    label: "Birthday gifts",
-    short: "Birthday",
-    prompt: "Birthday gift for mom under 5000",
-    query: "birthday",
-  },
-  {
-    id: "anniversary",
-    label: "Anniversary roses",
-    short: "Anniversary",
-    prompt: "Anniversary roses and chocolates",
-    query: "roses",
-  },
-  {
-    id: "valentine",
-    label: "Valentine specials",
-    short: "Valentine",
-    prompt: "Valentine gift mokakda hari?",
-    query: "valentine",
-  },
-  {
-    id: "chocolates",
-    label: "Chocolate boxes",
-    short: "Chocolates",
-    prompt: "Show me premium chocolate gift boxes",
-    query: "chocolate",
-    category: "chocolates",
-  },
-  {
-    id: "flowers",
-    label: "Fresh flowers",
-    short: "Flowers",
-    prompt: "Beautiful flower bouquets for delivery",
-    query: "bouquet",
-  },
-  {
-    id: "wedding",
-    label: "Wedding gifts",
-    short: "Wedding",
-    prompt: "Wedding gift ideas",
-    query: "gift box",
-  },
+  { id: "chocolates", typeLabel: "Chocolates", query: "chocolate" },
+  { id: "flowers", typeLabel: "Flowers", query: "roses bouquet" },
+  { id: "cakes", typeLabel: "Cakes", query: "cake" },
+  { id: "gift-boxes", typeLabel: "Gift boxes", query: "gift box" },
+  { id: "hampers", typeLabel: "Hampers", query: "hamper" },
+  { id: "greeting-cards", typeLabel: "Greeting cards", query: "greeting card" },
 ];
 
 function pickProduct(products: KaprukaProduct[]): KaprukaProduct | null {
-  return products.find((p) => p.image_url) ?? products[0] ?? null;
+  return products.find((p) => p.image_url && p.in_stock) ?? products.find((p) => p.image_url) ?? products[0] ?? null;
+}
+
+function truncateName(name: string, max = 42): string {
+  const trimmed = name.trim();
+  if (trimmed.length <= max) return trimmed;
+  return `${trimmed.slice(0, max - 1).trim()}…`;
 }
 
 let optionsCache: { at: number; data: GiftOption[] } | null = null;
 const OPTIONS_CACHE_MS = 10 * 60 * 1000;
 
-async function buildOption(opt: (typeof OPTION_QUERIES)[number]): Promise<GiftOption> {
+async function buildBestsellerOption(
+  type: (typeof BESTSELLER_TYPES)[number],
+): Promise<GiftOption | null> {
   const fallback: GiftOption = {
-    id: opt.id,
-    label: opt.label,
-    short: opt.short,
-    prompt: opt.prompt,
-    query: opt.query,
+    id: type.id,
+    label: type.typeLabel,
+    short: type.typeLabel,
+    prompt: `Show me bestselling ${type.typeLabel.toLowerCase()} on Kapruka`,
+    query: type.query,
+    product_id: null,
     image_url: null,
     sample_product: null,
     price: null,
   };
 
   try {
-    const products = await searchProducts({
-      q: opt.query,
-      category: opt.category,
-      limit: 3,
+    const { results: products } = await searchProducts({
+      q: type.query,
+      limit: 5,
+      sort: "bestseller",
+      in_stock_only: true,
     });
     const product = pickProduct(products);
+    if (!product) return fallback;
+
+    const name = product.name.trim();
     return {
-      ...fallback,
-      image_url: product?.image_url ?? null,
-      sample_product: product?.name ?? null,
-      price: product?.price ?? null,
+      id: product.id,
+      label: type.typeLabel,
+      short: truncateName(name),
+      prompt: `Tell me about ${name} and add similar ${type.typeLabel.toLowerCase()} to my cart`,
+      query: type.query,
+      product_id: product.id,
+      image_url: product.image_url ?? null,
+      sample_product: name,
+      price: product.price ?? null,
     };
   } catch {
     return fallback;
@@ -107,8 +87,18 @@ export async function getGiftOptions(): Promise<GiftOption[]> {
   }
 
   const results: GiftOption[] = [];
-  for (const opt of OPTION_QUERIES) {
-    results.push(await buildOption(opt));
+  for (const type of BESTSELLER_TYPES) {
+    results.push((await buildBestsellerOption(type)) ?? {
+      id: type.id,
+      label: type.typeLabel,
+      short: type.typeLabel,
+      prompt: `Show me bestselling ${type.typeLabel.toLowerCase()} on Kapruka`,
+      query: type.query,
+      product_id: null,
+      image_url: null,
+      sample_product: null,
+      price: null,
+    });
   }
 
   optionsCache = { at: Date.now(), data: results };

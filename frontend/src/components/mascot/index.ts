@@ -1,4 +1,4 @@
-export { TharuAvatar } from "./TharuAvatar";
+export { TharuAvatar, KaprukaLogoSpinner } from "./TharuAvatar";
 export {
   ChatMessageExample,
   CheckoutSuccessExample,
