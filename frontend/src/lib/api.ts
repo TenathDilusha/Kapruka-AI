@@ -103,15 +103,18 @@ export function streamMessage(
   onResult: (data: ChatResponse) => void,
   onError: (err: string) => void,
   languageHint?: "en" | "si" | "singlish",
+  historyTruncateTo?: number,
+  onAbort?: () => void,
 ) {
   const controller = new AbortController();
 
   fetch(`${API_URL}/api/chat/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sessionId, message, languageHint }),
+    body: JSON.stringify({ sessionId, message, languageHint, historyTruncateTo }),
     signal: controller.signal,
   }).then(async (res) => {
+    if (controller.signal.aborted) return;
     if (!res.ok || !res.body) {
       onError("Stream failed");
       return;
@@ -123,12 +126,17 @@ export function streamMessage(
 
     while (true) {
       const { done, value } = await reader.read();
+      if (controller.signal.aborted) {
+        await reader.cancel().catch(() => undefined);
+        return;
+      }
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
       const parts = buffer.split("\n\n");
       buffer = parts.pop() ?? "";
 
       for (const part of parts) {
+        if (controller.signal.aborted) return;
         const lines = part.split("\n");
         let event = "message";
         let data = "";
@@ -147,7 +155,13 @@ export function streamMessage(
         }
       }
     }
-  }).catch(() => onError("Connection lost"));
+  }).catch((err: unknown) => {
+    if (controller.signal.aborted || (err instanceof DOMException && err.name === "AbortError")) {
+      onAbort?.();
+      return;
+    }
+    onError("Connection lost");
+  });
 
   return () => controller.abort();
 }

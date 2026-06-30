@@ -62,11 +62,6 @@ Try: *"Birthday gift for mom under 5000"* or *"Anniversary roses and chocolates"
 
 Health: `GET /health` on both backends.
 
-<<<<<<< HEAD
-## Deploy on Render
-
-### Express (`backend-express`)
-=======
 ## Production hosting
 
 | Service | URL |
@@ -89,28 +84,13 @@ Health: `GET /health` on both backends.
 Redeploy after changing `VITE_*` variables (they are baked in at build time).
 
 ### Render — Express (`kapruka-ai-1`)
->>>>>>> 8da9b88 (Pin Python 3.12 for Render deploy)
 
 | Setting | Value |
 |---------|--------|
 | Root Directory | `backend-express` |
 | Build Command | `npm install --include=dev && npm run build` |
 | Start Command | `npm start` |
-<<<<<<< HEAD
 | Health Check | `/health` |
-
-**Environment variables**
-
-| Variable | Example |
-|----------|---------|
-| `PYTHON_AGENT_URL` | `https://your-python-service.onrender.com` |
-| `FRONTEND_URL` | `https://your-frontend.onrender.com` |
-| `KAPRUKA_MCP_URL` | `https://mcp.kapruka.com/mcp` |
-
-`PORT` is set automatically by Render. Do **not** use `yarn start` alone — you must run `npm run build` so `dist/index.js` exists.
-
-### Python (`backend-python`)
-=======
 
 | Environment variable | Value |
 |---------------------|--------|
@@ -120,21 +100,16 @@ Redeploy after changing `VITE_*` variables (they are baked in at build time).
 | `PYTHON_AGENT_TIMEOUT_MS` | `120000` |
 | `KAPRUKA_MCP_URL` | `https://mcp.kapruka.com/mcp` |
 
+`PORT` is set automatically by Render. Do **not** use `yarn start` alone — you must run `npm run build` so `dist/index.js` exists.
+
 ### Render — Python (`kapruka-ai`)
->>>>>>> 8da9b88 (Pin Python 3.12 for Render deploy)
 
 | Setting | Value |
 |---------|--------|
 | Root Directory | `backend-python` |
 | Build Command | `pip install -r requirements.txt` |
 | Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
-<<<<<<< HEAD
 | Health Check | `/health` |
-
-Set `OPENAI_API_KEY` in Render environment variables.
-
-Or use the repo `render.yaml` blueprint for both services.
-=======
 
 | Environment variable | Value |
 |---------------------|--------|
@@ -145,6 +120,8 @@ Or use the repo `render.yaml` blueprint for both services.
 
 Render defaults to Python 3.14, which breaks `pydantic-core` (Rust build). Pin **3.12.8** via `PYTHON_VERSION` or `backend-python/runtime.txt`.
 
+Or use the repo `render.yaml` blueprint for both services.
+
 ### Smoke test
 
 ```bash
@@ -153,4 +130,3 @@ curl https://kapruka-ai-1.onrender.com/health
 ```
 
 Then open the Vercel frontend and send a chat message. First request after idle may take ~30–60s while Render free instances wake up.
->>>>>>> 8da9b88 (Pin Python 3.12 for Render deploy)

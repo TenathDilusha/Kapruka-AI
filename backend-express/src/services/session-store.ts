@@ -93,3 +93,9 @@ export function setGiftMessageDraft(sessionId: string, message: string): void {
 export function getGiftMessageDraft(sessionId: string): string {
   return getOrCreateSession(sessionId).giftMessageDraft;
 }
+
+export function truncateSessionMessages(sessionId: string, count: number): void {
+  const session = getOrCreateSession(sessionId);
+  session.messages = session.messages.slice(0, Math.max(0, count));
+  session.updatedAt = Date.now();
+}

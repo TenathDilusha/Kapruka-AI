@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ExternalLink, Gift, Package, Send, ShoppingCart, Sparkles, Truck } from "lucide-react";
+import { ExternalLink, Gift, Package, Send, ShoppingCart, Sparkles, Square, Truck } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
@@ -22,7 +22,7 @@ import {
   submitCheckout,
   updateCartItem,
 } from "@/lib/api";
-import { UI, detectLanguage } from "@/lib/i18n";
+import { UI, detectLanguage, getSamplePrompts } from "@/lib/i18n";
 import { cn, formatPrice } from "@/lib/utils";
 import type { CartItem, ChatMessage, GiftOption, Product } from "@/types";
 
@@ -73,8 +73,13 @@ export function ChatApp() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<(() => void) | null>(null);
+  const generationRef = useRef(0);
+
+  const samplePrompts = useMemo(() => getSamplePrompts(3), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,18 +108,11 @@ export function ChatApp() {
 
   const trustLabels = t.trust;
 
-  const sendMessage = useCallback(
-    (trimmed: string) => {
+  const startStream = useCallback(
+    (trimmed: string, options?: { historyTruncateTo?: number }) => {
+      const generation = ++generationRef.current;
       const languageHint = detectLanguage(trimmed);
 
-      const userMsg: ChatMessage = {
-        id: uuidv4(),
-        role: "user",
-        content: trimmed,
-        timestamp: Date.now(),
-      };
-      setMessages((m) => [...m, userMsg]);
-      setInput("");
       setLoading(true);
       setStatusText("Thinking...");
 
@@ -122,23 +120,47 @@ export function ChatApp() {
       abortRef.current = streamMessage(
         trimmed,
         sessionId,
-        (status) => setStatusText(status),
+        (status) => {
+          if (generation !== generationRef.current) return;
+          setStatusText(status);
+        },
         (data) => {
+          if (generation !== generationRef.current) return;
           setSessionId(data.sessionId);
           setCart(data.cart);
           setMessages((m) => [...m, data.message]);
           setLoading(false);
           setStatusText(undefined);
+          abortRef.current = null;
         },
         () => {
+          if (generation !== generationRef.current) return;
           setLoading(false);
           setStatusText(undefined);
+          abortRef.current = null;
         },
         languageHint,
+        options?.historyTruncateTo,
+        () => {
+          if (generation !== generationRef.current) return;
+          setLoading(false);
+          setStatusText(undefined);
+          abortRef.current = null;
+        },
       );
     },
     [sessionId],
   );
+
+  const handleStop = useCallback(() => {
+    generationRef.current += 1;
+    abortRef.current?.();
+    abortRef.current = null;
+    setLoading(false);
+    setStatusText(undefined);
+    setEditingId(null);
+    setEditDraft("");
+  }, []);
 
   useEffect(() => {
     if (!isWelcome) return;
@@ -154,14 +176,22 @@ export function ChatApp() {
       queryHandled.current = true;
       sessionStorage.removeItem(PENDING_QUERY_KEY);
       sessionStorage.setItem(CHAT_STARTED_KEY, "1");
-      sendMessage(pending);
+
+      const userMsg: ChatMessage = {
+        id: uuidv4(),
+        role: "user",
+        content: pending,
+        timestamp: Date.now(),
+      };
+      setMessages((m) => [...m, userMsg]);
+      startStream(pending);
       return;
     }
 
     if (!sessionStorage.getItem(CHAT_STARTED_KEY)) {
       navigate("/", { replace: true });
     }
-  }, [location.pathname, navigate, sendMessage]);
+  }, [location.pathname, navigate, startStream]);
 
   const handleSend = useCallback(
     (text: string) => {
@@ -174,11 +204,52 @@ export function ChatApp() {
         return;
       }
 
-      sendMessage(trimmed);
+      const userMsg: ChatMessage = {
+        id: uuidv4(),
+        role: "user",
+        content: trimmed,
+        timestamp: Date.now(),
+      };
+      setMessages((m) => [...m, userMsg]);
+      setInput("");
       sessionStorage.setItem(CHAT_STARTED_KEY, "1");
+      startStream(trimmed);
     },
-    [isWelcome, loading, navigate, sendMessage],
+    [isWelcome, loading, navigate, startStream],
   );
+
+  const handleStartEdit = useCallback((message: ChatMessage) => {
+    if (loading || message.role !== "user" || message.id === "welcome") return;
+    setEditingId(message.id);
+    setEditDraft(message.content);
+  }, [loading]);
+
+  const handleEditCancel = useCallback(() => {
+    setEditingId(null);
+    setEditDraft("");
+  }, []);
+
+  const handleEditSubmit = useCallback(() => {
+    if (!editingId || loading) return;
+    const trimmed = editDraft.trim();
+    if (!trimmed) return;
+
+    const editIndex = messages.findIndex((m) => m.id === editingId);
+    if (editIndex === -1) return;
+
+    const historyTruncateTo = messages
+      .slice(0, editIndex)
+      .filter((m) => m.id !== "welcome").length;
+
+    setMessages((prev) => {
+      const next = prev.slice(0, editIndex + 1);
+      next[editIndex] = { ...next[editIndex], content: trimmed, timestamp: Date.now() };
+      return next;
+    });
+    setEditingId(null);
+    setEditDraft("");
+    startStream(trimmed, { historyTruncateTo });
+  }, [editDraft, editingId, loading, messages, startStream]);
 
   const handleAddProduct = async (product: Product) => {
     if (!sessionId) return;
@@ -392,6 +463,13 @@ export function ChatApp() {
                     message={msg}
                     onAddProduct={handleAddProduct}
                     onViewProduct={setDetailProduct}
+                    canEdit={msg.role === "user" && msg.id !== "welcome" && !loading}
+                    isEditing={editingId === msg.id}
+                    editDraft={editingId === msg.id ? editDraft : undefined}
+                    onEditStart={() => handleStartEdit(msg)}
+                    onEditDraftChange={setEditDraft}
+                    onEditSubmit={handleEditSubmit}
+                    onEditCancel={handleEditCancel}
                   />
                 </motion.div>
               ))}
@@ -414,7 +492,7 @@ export function ChatApp() {
           {isWelcome && (
             <WelcomeSamplePrompts
               className="mb-3"
-              prompts={t.samplePrompts}
+              prompts={samplePrompts}
               onSelect={handleSend}
               disabled={loading}
             />
@@ -436,17 +514,23 @@ export function ChatApp() {
               onFocus={() => setInputFocused(true)}
               onBlur={() => setInputFocused(false)}
               placeholder={t.placeholder}
-              disabled={loading}
               className="h-9 flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none disabled:opacity-60"
             />
             <Button
-              type="submit"
+              type={loading ? "button" : "submit"}
               size="icon"
               variant="secondary"
-              disabled={loading || !input.trim()}
-              className="h-10 w-10 rounded-xl shadow-md shadow-brand-purple/20"
+              disabled={!loading && !input.trim()}
+              onClick={loading ? handleStop : undefined}
+              className={cn(
+                "h-10 w-10 rounded-xl shadow-md",
+                loading
+                  ? "bg-text-primary text-white shadow-black/20 hover:bg-text-primary/90"
+                  : "shadow-brand-purple/20",
+              )}
+              aria-label={loading ? "Stop generating" : "Send message"}
             >
-              <Send className="h-4 w-4" />
+              {loading ? <Square className="h-3.5 w-3.5 fill-current" /> : <Send className="h-4 w-4" />}
             </Button>
           </form>
         </div>

@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import type { CartItem, ChatMessage, GiftBundle, Product } from "../types/index.js";
 import { callPythonAgent } from "./python-agent.js";
-import { addToCart, getCart, getCartStats, getGiftMessageDraft, getOrCreateSession, removeFromCart, setGiftMessageDraft, updateCartQuantity } from "./session-store.js";
+import { addToCart, getCart, getCartStats, getGiftMessageDraft, getOrCreateSession, removeFromCart, setGiftMessageDraft, truncateSessionMessages, updateCartQuantity } from "./session-store.js";
 import { cartAddMessage, extractGiftMessage, resolveLanguage } from "./localization.js";
 import { isDeliveryDateAllowed, validateCartDelivery } from "./delivery-validation.js";
 
@@ -81,7 +81,7 @@ export async function handleChatMessage(
     image_url?: string;
     quantity?: number;
   },
-  meta?: { languageHint?: "en" | "si" | "singlish" },
+  meta?: { languageHint?: "en" | "si" | "singlish"; historyTruncateTo?: number },
 ): Promise<OrchestratorResult> {
   const session = getOrCreateSession(sessionId);
 
@@ -90,6 +90,9 @@ export async function handleChatMessage(
     session.preferredLanguage = lang;
     const giftMsg = extractGiftMessage(userMessage);
     if (giftMsg) setGiftMessageDraft(session.id, giftMsg);
+    if (meta?.historyTruncateTo != null) {
+      truncateSessionMessages(session.id, meta.historyTruncateTo);
+    }
   }
 
   if (action?.type === "add_to_cart" && action.name && action.price != null && action.currency) {
